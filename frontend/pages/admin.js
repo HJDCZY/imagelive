@@ -1,52 +1,61 @@
-//如果没有登录，跳转到login.js
-//检查用户的登录状态cookie
 import { useEffect, useState } from 'react';
-import  config  from '../config';
+import { useRouter } from 'next/router';
+import config from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Admin() {
+    const router = useRouter();
     const [message, setMessage] = useState('');
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [pageReady, setPageReady] = useState(false);  // 添加页面准备状态
+    const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
 
+    // 检查登录状态
     useEffect(() => {
-        const checkLogin = async () => {
-            try {
-                const response = await fetch(`${config.backendUrl}/admin`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-
-                if (response.ok) {
-                    // 如果已登录，获取用户列表
-                    const data = await response.json();
-                    setUsers(data.users);
-                } else {
-                    // 如果未登录，跳转到登录页面
-                    window.location.href = '/login';
-                }
-            } catch (error) {
-                setMessage('获取用户列表失败：服务器连接错误');
-                console.error('Admin error:', error);
-            } finally {
-                setLoading(false);
+        if (!authLoading) {  // 使用 AuthContext 的 loading 状态
+            setLoading(false);  // 更新组件的 loading 状态
+            if (!user) {
+                router.push('/login');
+            } else {
+                setPageReady(true);
             }
         }
+    }, [user, authLoading, router]);  // 依赖项改为 authLoading
 
-        checkLogin();
-    }, []);
 
+    function logout() {
+        fetch(`${config.backendUrl}/logout`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Origin': window.location.origin
+            }
+        }).then(response => {
+            if (response.ok) {
+                setUser(null);
+                router.push('/login');
+            }
+        });
+    }
+
+    // 如果页面还没准备好或正在加载，显示加载状态
+    if (authLoading || !pageReady) {
+        return <div>Loading...</div>;
+    }
+
+    // 只在页面准备就绪后渲染实际内容
     return (
         <div>
             <h1>Admin</h1>
-            {loading ? (
-                <p>Loading...</p>
-            ) : (
-                <ul>
-                    {users.map(user => (
-                        <li key={user.id}>{user.username}</li>
-                    ))}
-                </ul>
-            )}
+            <button onClick={logout}>Logout</button> 
+            <ul>
+                {users.map(user => (
+                    <li key={user.id}>{user.username}</li>
+                ))}
+            </ul>
             <p>{message}</p>
         </div>
     );
