@@ -14,8 +14,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:55762"],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=[
+        "Content-Type",
+        "Accept",
+        "Authorization",
+        "Origin",
+        "X-Requested-With"
+    ],
+    expose_headers=["Set-Cookie"],
 )
 
 sql_connection = mysql_queries.connect()

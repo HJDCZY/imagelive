@@ -1,31 +1,23 @@
 import {useState, useEffect} from 'react';
 import config from '../config';
 import { useRouter } from 'next/router';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
+    const { user, setUser, loading } = useAuth();
 
-    // 组件加载时检查登录状态
+    // 如果已经登录，跳转到admin页面
     useEffect(() => {
-        // 检查是否已经登录（比如检查cookie或localStorage）
-        const checkLoginStatus = async () => {
-            try {
-                const response = await fetch(`${config.backendUrl}/check-login`, {
-                    credentials: 'include'
-                });
-                if (response.ok) {
-                    router.push('/admin');
-                }
-            } catch (error) {
-                console.error('检查登录状态失败:', error);
-            }
-        };
+        if (user) {
+            router.push('/admin');
+        }
+    }, [user, router]);
 
-        checkLoginStatus();
-    }, []);
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -47,6 +39,13 @@ export default function Login() {
             
             if (response.ok) {
                 setMessage('登录成功');
+                console.log('Login success:', data);
+                setUser(data.username);
+
+                //检查cookie是否设置成功
+                // console.log(document.cookie);
+
+                // 更新用户状态
                 // 登录成功后跳转
                 router.push('/admin');
             } else if (response.status === 400) {
@@ -58,6 +57,11 @@ export default function Login() {
             setMessage('登录失败：服务器连接错误');
             console.error('Login error:', error);
         }
+    }
+
+    // 如果正在加载，显示加载状态
+    if (loading) {
+        return <div>加载中...</div>;
     }
 
     return (
