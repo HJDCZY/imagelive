@@ -13,3 +13,5 @@ git屏蔽了node_modules，所以需要自己安装依赖
 npm install
 ```
 
+后端使用mysql，需要自己配置数据库，数据库配置文件我们放在了`backend/myysql.sql`中，配置完成后请修改`backend/config.py`中的数据库配置
+
