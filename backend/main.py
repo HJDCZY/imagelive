@@ -1,12 +1,14 @@
 from fastapi import FastAPI
 import mysql_queries
 import login
+import account
 
 
 
 app = FastAPI()
 
 app.include_router(login.router)
+app.include_router(account.router)
 
 #修改CORS，允许所有的请求
 from fastapi.middleware.cors import CORSMiddleware

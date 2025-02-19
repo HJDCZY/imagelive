@@ -1,0 +1,8 @@
+node_modules
+venv
+*.log
+*.tmp
+.next
+package-lock.json
+package.json
+#cloc --exclude-dir=$(tr '\n' ',' < .clocignore) .

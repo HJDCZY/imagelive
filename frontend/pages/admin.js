@@ -10,6 +10,7 @@ export default function Admin() {
     const [loading, setLoading] = useState(true);
     const [pageReady, setPageReady] = useState(false);  // 添加页面准备状态
     const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
+    const [currentPage, setCurrentPage] = useState('accountManage');
 
     // 检查登录状态
     useEffect(() => {
@@ -48,15 +49,97 @@ export default function Admin() {
 
     // 只在页面准备就绪后渲染实际内容
     return (
-        <div>
-            <h1>Admin</h1>
-            <button onClick={logout}>Logout</button> 
-            <ul>
-                {users.map(user => (
-                    <li key={user.id}>{user.username}</li>
-                ))}
-            </ul>
-            <p>{message}</p>
+        <div style={{ display: 'flex' }}>
+            <LeftNavBar setCurrentPage={setCurrentPage} />
+            <div style={{ flex: 1, padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button 
+                    onClick={logout}
+                    style={{
+                        
+                        padding: '10px 20px',
+                        cursor: 'pointer',
+                        backgroundColor: '#f0f0f0',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        minWidth: '100px'
+                    }}
+                    onMouseEnter={e => {
+                        e.target.style.backgroundColor = '#e0e0e0';
+                        e.target.style.transform = 'scale(1.05)';
+                    }}
+                    onMouseLeave={e => {
+                        e.target.style.backgroundColor = '#f0f0f0';
+                        e.target.style.transform = 'scale(1)';
+                    }}
+                >
+                    退出登录
+                </button>
+                </div>
+                <div style={{ flex: 1, position: 'relative', width: '100%', height: 'calc(100vh - 80px)' }}>
+                    {currentPage && (
+                        <iframe
+                            src={`/admins/${currentPage}`}
+                            
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                border: 'none'
+                            }}
+
+                        />
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
+
+// 左侧竖直导航栏组件
+function LeftNavBar({ setCurrentPage }) {
+    const handleNavClick = (page) => {
+        setCurrentPage(page);
+    };
+
+    return (
+        <div style={{
+            width: '200px',
+            height: '100vh',
+            backgroundColor: '#f0f0f0',
+            padding: '20px',
+            borderRight: '1px solid #ddd',
+            overflowY: 'auto'
+        }}>
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+                <li onClick={() => handleNavClick('accountManage')} style={navItemStyle}>
+                    账号管理
+                </li>
+                <li onClick={() => handleNavClick('imageManage')} style={navItemStyle}>
+                    图片管理
+                </li>
+                <li onClick={() => handleNavClick('imageUpload')} style={navItemStyle}>
+                    图片上传
+                </li>
+                <li onClick={() => handleNavClick('activityManage')} style={navItemStyle}>
+                    活动管理
+                </li>
+            </ul>
+        </div>
+    );
+}
+
+const navItemStyle = {
+    padding: '10px',
+    margin: '5px 0',
+    cursor: 'pointer',
+    borderRadius: '4px',
+    transition: 'background-color 0.2s',
+    '&:hover': {
+        backgroundColor: '#e0e0e0'
+    }
+};

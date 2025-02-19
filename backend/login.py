@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import mysql_queries  
+import time
 
 router = APIRouter()
 
@@ -41,8 +42,26 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
+# 添加最后一次登录时间记录，防止暴力破解
+last_login_attempt = {}  # 用户名: 最后登录时间
+
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    # 检查登录频率
+    username = form_data.username.replace("'", "").replace('"', '').replace(';', '')
+    current_time = time.time()
+    
+    if username in last_login_attempt:
+        time_elapsed = current_time - last_login_attempt[username]
+        if time_elapsed < 5:  # 如果距离上次登录不到1秒
+            raise HTTPException(
+                status_code=429, 
+                detail=f"请求过于频繁，请等待 {5 - time_elapsed:.1f} 秒后重试"
+            )
+    
+    # 更新最后登录时间
+    last_login_attempt[username] = current_time
+    
     #为了防止sql注入，我们过滤所有的单引号，双引号和分号
     form_data.username = form_data.username.replace("'", "").replace('"', '').replace(';', '')
     form_data.password = form_data.password.replace("'", "").replace('"', '').replace(';', '')
