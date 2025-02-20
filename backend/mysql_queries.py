@@ -29,12 +29,23 @@ def query(connection, query, params=None):
     cursor = connection.cursor()
     try:
         cursor.execute(query, params)
-        # 在提交之前先获取结果
-        result = cursor.fetchall()
+        
+        # 判断是否为 SELECT 查询
+        if query.strip().upper().startswith('SELECT'):
+            result = cursor.fetchall()
+        else:
+            # 对于 UPDATE、INSERT、DELETE 等操作，返回受影响的行数
+            result = cursor.rowcount > 0
+
         connection.commit()
         return result
     except Error as e:
-        print('在执行查询时发生错误：', e)
-        return None
+        error_info = {
+            'error_code': e.errno,
+            'error_msg': str(e),
+            'sql_state': e.sqlstate if hasattr(e, 'sqlstate') else None
+        }
+        print('SQL错误详情:', error_info)
+        raise Exception(f"SQL执行错误: {error_info['error_msg']}")
     finally:
         cursor.close()
