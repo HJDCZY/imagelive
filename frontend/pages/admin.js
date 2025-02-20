@@ -3,6 +3,39 @@ import { useRouter } from 'next/router';
 import config from '../config';
 import { useAuth } from '../contexts/AuthContext';
 
+
+// 账号管理
+// 图片管理
+// 图片上传
+// 活动管理
+//页面的翻译
+
+const pageMap = {
+    accountManage: '账号管理',
+    imageManage: '图片管理',
+    imageUpload: '图片上传',
+    activityManage: '活动管理'
+};
+
+//每30秒检查一次登录状态，如果未登录，强制刷新页面
+setInterval(() => {
+    fetch(`${config.backendUrl}/check-login`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Origin': window.location.origin
+        }
+
+    }).then(response => {
+        if (!response.ok) {
+            window.location.reload();
+        }
+    }
+    );
+}, 30000);
+
 export default function Admin() {
     const router = useRouter();
     const [message, setMessage] = useState('');
@@ -53,6 +86,10 @@ export default function Admin() {
             <LeftNavBar setCurrentPage={setCurrentPage} />
             <div style={{ flex: 1, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <span style={{ marginRight: '20px' }}>当前用户：{user}</span>
+                        <span style={{ marginRight: '20px' }}>当前页面：{pageMap[currentPage]}</span>
+                    </div>
                 <button 
                     onClick={logout}
                     style={{
