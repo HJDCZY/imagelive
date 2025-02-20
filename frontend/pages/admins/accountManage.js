@@ -7,6 +7,7 @@ export default function AccountManage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [pageReady, setPageReady] = useState(false);
+    const [showChangePassword, setShowChangePassword] = useState(false); // 添加新状态
     // 检查登录状态
     const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
     useEffect(() => {
@@ -51,64 +52,81 @@ export default function AccountManage() {
     // 只在页面准备就绪后渲染实际内容
     return (
         <div>
-            <h1>Account Manage</h1>
+        <h1>账号管理</h1>
+        <button 
+            onClick={() => setShowChangePassword(!showChangePassword)}
+            style={{
+                padding: '10px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={e => e.target.style.backgroundColor = '#0056b3'}
+            onMouseLeave={e => e.target.style.backgroundColor = '#007bff'}
+        >
+            {showChangePassword ? '取消修改密码' : '修改本账号密码'}
+        </button>
+        
+        {showChangePassword && (
             <div id='change-password' style={{ 
-            border: '1px solid #ddd',
-            borderRadius: '8px',
-            padding: '20px',
-            maxWidth: '400px',
-            margin: '20px auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '15px',
-            backgroundColor: '#fff',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-            <label htmlFor='old-password' style={{ fontWeight: '500' }}>原密码</label>
-            <input 
-                type='password' 
-                id='old-password' 
-                name='old-password'
-                style={{
-                    padding: '8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc'
-                }}
-            />
-            <label htmlFor='new-password' style={{ fontWeight: '500' }}>新密码</label>
-            <input 
-                type='password' 
-                id='new-password' 
-                name='new-password'
-                style={{
-                    padding: '8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc'
-                }}
-            />
-            <button 
-                onClick={changePassword}
-                style={{
-                    padding: '10px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    marginTop: '10px',
-                    transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={e => e.target.style.backgroundColor = '#0056b3'}
-                onMouseLeave={e => e.target.style.backgroundColor = '#007bff'}
-            >
-                修改密码
-            </button>
-        </div>
-            <AccountManageBar />
-            <AddNewUser />
-        </div>
-
-            
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                padding: '20px',
+                maxWidth: '400px',
+                margin: '20px auto',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '15px',
+                backgroundColor: '#fff',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+                <label htmlFor='old-password' style={{ fontWeight: '500' }}>原密码</label>
+                <input 
+                    type='password' 
+                    id='old-password' 
+                    name='old-password'
+                    style={{
+                        padding: '8px',
+                        borderRadius: '4px',
+                        border: '1px solid #ccc'
+                    }}
+                />
+                <label htmlFor='new-password' style={{ fontWeight: '500' }}>新密码</label>
+                <input 
+                    type='password' 
+                    id='new-password' 
+                    name='new-password'
+                    style={{
+                        padding: '8px',
+                        borderRadius: '4px',
+                        border: '1px solid #ccc'
+                    }}
+                />
+                <button 
+                    onClick={changePassword}
+                    style={{
+                        padding: '10px',
+                        backgroundColor: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        marginTop: '10px',
+                        transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.target.style.backgroundColor = '#45a049'}
+                    onMouseLeave={e => e.target.style.backgroundColor = '#4CAF50'}
+                >
+                    确认修改
+                </button>
+            </div>
+        )}
+        <AccountManageBar />
+        <AddNewUser />
+    </div>
     );
 }
 
@@ -159,14 +177,12 @@ function deleteUser( username ) {
 
 
 function AccountItem({ username, auth }) {
-    // 用户条目
-    const [selectedAuth, setSelectedAuth] = useState(auth); // 使用当前权限作为初始值
+    const [selectedAuth, setSelectedAuth] = useState(auth);
     const authMapping = {
         'admin': '管理员',
         'contributer': '贡献者',
         'user': '普通用户'
     };
-
 
     return (
         <div style={{
@@ -180,75 +196,78 @@ function AccountItem({ username, auth }) {
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                marginBottom: '15px'
+                justifyContent: 'space-between'
             }}>
-                <span style={{ fontWeight: '500', marginRight: '10px' }}>用户: {username}</span>
-                <span style={{ 
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    backgroundColor: auth === 'admin' ? '#4CAF50' : auth === 'contributor' ? '#2196F3' : '#FFA726',
-                    color: 'white',
-                    fontSize: '14px'
-                }}>
-                    当前权限: {authMapping[auth] || '未知权限'}
-                </span>
-            </div>
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-            }}>
-                <select
-                    value={selectedAuth}
-                    onChange={(e) => setSelectedAuth(e.target.value)}
-                    style={{
-                        padding: '8px',
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontWeight: '500' }}>用户: {username}</span>
+                    <span style={{ 
+                        padding: '4px 8px',
                         borderRadius: '4px',
-                        border: '1px solid #ddd',
-                        backgroundColor: '#fff',
-                        cursor: 'pointer',
-                        outline: 'none'
-                    }}
-                >
-                    <option value="admin">管理员</option>
-                    <option value="contributer">贡献者</option>
-                </select>
-                <button 
-                    onClick={() => changeAuth(username, selectedAuth)}
-                    style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#4CAF50',
+                        backgroundColor: auth === 'admin' ? '#4CAF50' : auth === 'contributor' ? '#2196F3' : '#FFA726',
                         color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={e => e.target.style.backgroundColor = '#45a049'}
-                    onMouseLeave={e => e.target.style.backgroundColor = '#4CAF50'}
-                >
-                    更改权限
-                </button>
-                <button 
-                    onClick={() => {
-                        if (window.confirm('确定要删除该用户吗？')) {
-                            deleteUser(username);
-                        }
-                    }}
-                    style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#f44336',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={e => e.target.style.backgroundColor = '#da190b'}
-                    onMouseLeave={e => e.target.style.backgroundColor = '#f44336'}
-                >
-                    删除用户
-                </button>
+                        fontSize: '14px'
+                    }}>
+                        当前权限: {authMapping[auth] || '未知权限'}
+                    </span>
+                </div>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px'
+                }}> 
+                    <span>将其权限更改为</span>
+                    <select
+                        value={selectedAuth}
+                        onChange={(e) => setSelectedAuth(e.target.value)}
+                        style={{
+                            padding: '8px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            backgroundColor: '#fff',
+                            cursor: 'pointer',
+                            outline: 'none'
+                        }}
+                    >
+                        <option value="admin">管理员</option>
+                        <option value="contributer">贡献者</option>
+                    </select>
+                    <button 
+                        onClick={() => changeAuth(username, selectedAuth)}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => e.target.style.backgroundColor = '#45a049'}
+                        onMouseLeave={e => e.target.style.backgroundColor = '#4CAF50'}
+                    >
+                        更改权限
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if (window.confirm('确定要删除该用户吗？')) {
+                                deleteUser(username);
+                            }
+                        }}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#f44336',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => e.target.style.backgroundColor = '#da190b'}
+                        onMouseLeave={e => e.target.style.backgroundColor = '#f44336'}
+                    >
+                        删除用户
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -302,7 +321,6 @@ function AccountManageBar() {
 
     return (
         <div>
-            <h1>Account Manage</h1>
             <div>
                 {accountList.map((account) => (
                     <AccountItem 
@@ -320,7 +338,46 @@ function AddNewUser() {
 
     //添加新用户按钮，点击之后展开输入框
     const [showInput, setShowInput] = useState(false);
+    const router = useRouter();
+    const [loading, setLoading] = useState(true);
+    const [pageReady, setPageReady] = useState(false);
+    const [userAuth, setUserAuth] = useState(null);
+    const { user, loading: authLoading } = useAuth();
 
+    useEffect(() => {
+        if (!authLoading && user) {
+            // 获取用户权限
+            fetch(`${config.backendUrl}/getauth`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.auth) {
+                    setUserAuth(data.auth);
+                    setPageReady(data.auth === 'admin');
+                }
+                setLoading(false);
+            })
+            .catch(error => {
+                console.error('获取权限失败:', error);
+                setLoading(false);
+            });
+        } else if (!user) {
+            router.push('/login');
+        }
+    }, [user, authLoading, router]);
+
+    if (loading || authLoading) {
+        return <div>加载中...</div>;
+    }
+
+    if (!pageReady || userAuth !== 'admin') {
+        return null;
+    }
     return (
         <div>
             <button 
