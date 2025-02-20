@@ -49,4 +49,162 @@ async def change_password(request: Request, password_data: PasswordChange):
         return {"success": "密码修改成功"}
     return {"error": "密码修改失败"}
 
-    
+
+async def get_user_auth(username: str):
+    """内部函数：通过用户名获取权限"""
+    query = "SELECT auth FROM users WHERE name = %s"
+    params = (username,)
+    result = mysql_queries.query(mysql_queries.connection, query, params)
+    if result:
+        return result[0][0]
+    return None
+
+@router.get("/getauth")
+async def get_auth_endpoint(request: Request):
+    """API端点：获取当前登录用户的权限"""
+    access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
+    if access_token is None:
+        raise HTTPException(status_code=400, detail="未登录")
+    try:
+        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
+        username: str = payload.get("sub")
+        auth = await get_user_auth(username)
+        if auth is not None:
+            print(auth)
+            return {"auth": auth}
+        return {"error": "用户不存在"}
+    except JWTError:
+        raise HTTPException(status_code=400, detail="未登录")
+    return {"error": "未知错误"}
+
+class AuthChange(BaseModel):
+    username: str
+    newauth: str
+
+
+@router.post("/changeAuth")
+async def changeauth(request: Request, auth_data: AuthChange):
+    #验证请求用户的权限时是否是管理员
+    access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
+    if access_token is None:
+        raise HTTPException(status_code=400, detail="未登录")
+    try:
+        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
+        username: str = payload.get("sub")
+        auth = await get_user_auth(username)
+        if auth is not None:
+            if auth == "admin":
+                #检查用户是否存在
+                if not authenticate_user(auth_data.username):
+                    raise HTTPException(status_code=400, detail="用户不存在")
+                #更新权限
+                query = "UPDATE users SET auth = %s WHERE name = %s"
+                params = (auth_data.newauth, auth_data.username)
+                result = mysql_queries.query(mysql_queries.connection, query, params)
+                #展示sql报错
+                
+                if result:
+                    return {"success": "权限修改成功"}
+                raise HTTPException(status_code=400, detail="权限修改失败")
+            raise HTTPException(status_code=400, detail="权限不足")
+        raise HTTPException(status_code=400, detail="用户不存在")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="未登录")
+    return {"error": "未知错误"}
+
+#username的json格式
+class Username(BaseModel):
+    username: str
+
+@router.post("/deleteUser")
+async def deleteuser(request: Request, username_data: Username):
+    # 验证请求用户的权限时是否是管理员
+    access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
+    if access_token is None:
+        raise HTTPException(status_code=400, detail="未登录")
+    try:
+        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
+        username: str = payload.get("sub")
+        auth = await get_user_auth(username)
+        if auth is not None:
+            if auth == "admin":
+                # 使用请求体中的用户名
+                if not authenticate_user(username_data.username):
+                    raise HTTPException(status_code=400, detail="用户不存在")
+                # 删除用户
+                query = "DELETE FROM users WHERE name = %s"
+                params = (username_data.username,)
+                result = mysql_queries.query(mysql_queries.connection, query, params)
+                if result:
+                    return {"success": "用户删除成功"}
+                raise HTTPException(status_code=400, detail="用户删除失败")
+            raise HTTPException(status_code=400, detail="权限不足")
+        raise HTTPException(status_code=400, detail="用户不存在")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="未登录")
+
+
+@router.get("/accountList")
+#前端获取用户列表
+async def accountList(request: Request):
+    #验证请求用户的权限时是否是管理员
+    access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
+    if access_token is None:
+        raise HTTPException(status_code=400, detail="未登录")
+    try:
+        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
+        username: str = payload.get("sub")
+        auth = await get_user_auth(username)
+        if auth is not None:
+            if auth == "admin":
+                #获取用户列表
+                query = "SELECT name, auth FROM users"
+                result = mysql_queries.query(mysql_queries.connection, query)
+                if result:
+                    return {"users": result}
+                return {"error": "获取用户列表失败"}
+            raise HTTPException(status_code=400, detail="权限不足")
+        return {"error": "用户不存在"}
+    except JWTError:
+        raise HTTPException(status_code=400, detail="未登录")
+    return {"error": "未知错误"}
+
+
+#body: JSON.stringify({ username, password, auth }),
+class AddUser(BaseModel):
+    username: str
+    password: str
+    auth: str
+
+@router.post("/addUser")
+async def adduser(request: Request):
+    #验证请求用户的权限时是否是管理员
+    access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
+    if access_token is None:
+        raise HTTPException(status_code=400, detail="未登录")
+    try:
+        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
+        username: str = payload.get("sub")
+        auth = await get_user_auth(username)
+        if auth is not None:
+            if auth == "admin":
+                #获取请求参数
+                user_data = await request.json()
+                username = user_data["username"]
+                password = user_data["password"]
+                auth = user_data["auth"]
+                #检查用户是否存在
+                if authenticate_user(username):
+                    raise HTTPException(status_code=400, detail="用户已存在")
+                #添加用户
+                query = "INSERT INTO users (name, password, auth) VALUES (%s, %s, %s)"
+                params = (username, password, auth)
+                result = mysql_queries.query(mysql_queries.connection, query, params)
+                if result:
+                    return {"success": "用户添加成功"}
+                return {"error": "用户添加失败"}
+            raise HTTPException(status_code=400, detail="权限不足")
+        return {"error": "用户不存在"}
+    except JWTError:
+        raise HTTPException(status_code=400, detail="未登录")
+    return {"error": "未知错误"}
