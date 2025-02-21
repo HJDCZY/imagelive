@@ -3,13 +3,14 @@ import mysql_queries
 import login
 import account
 import activity
-
+import imageupload
 
 app = FastAPI()
 
 app.include_router(login.router)
 app.include_router(account.router)
 app.include_router(activity.router)
+app.include_router(imageupload.router)
 
 #修改CORS，允许所有的请求
 from fastapi.middleware.cors import CORSMiddleware
