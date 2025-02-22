@@ -2,11 +2,12 @@ import { use, useEffect, useState ,useCallback } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import config from '../../config';
+import withAuth from '../../contexts/withAuth';
 
-export default function imageManage() {
-    const { user, loading } = useAuth();
-    const router = useRouter();
-    const [pageReady, setPageReady] = useState(false);
+function ImageManage({ user }) {  // 通过 props 接收 user
+    // const { user, loading } = useAuth();
+    // const router = useRouter();
+    // const [pageReady, setPageReady] = useState(false);
     const [selectedActivity, setSelectedActivity] = useState('');
     const [activities, setActivities] = useState([]);
     const [previewUrls, setPreviewUrls] = useState([]);
@@ -17,18 +18,10 @@ export default function imageManage() {
     const [imageUrls, setImageUrls] = useState({});
     const [imageCache, setImageCache] = useState(new Map());
 
-    // 检查登录状态，如果未登录，跳转到登录页面
+    // 获取活动列表
     useEffect(() => {
-        if (!loading) {
-            if (!user) {
-                router.push('/login');
-            } else {
-                setPageReady(true);
-                // 只在登录验证成功后加载内容
-                fetchActivities().then(data => setActivities(data));
-            }
-        }
-    }, [user, loading, router]);
+        fetchActivities().then(data => setActivities(data));
+    }, []);
 
     // 清理预览URL
     useEffect(() => {
@@ -91,20 +84,20 @@ export default function imageManage() {
     }, [allImages, imageCache]);
 
     // 如果页面未准备好，显示加载状态
-    if (!pageReady) {
-        return (
-            <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                fontSize: '1.2rem',
-                color: '#666'
-            }}>
-                正在加载...
-            </div>
-        );
-    }
+    // if (!pageReady) {
+    //     return (
+    //         <div style={{
+    //             display: 'flex',
+    //             justifyContent: 'center',
+    //             alignItems: 'center',
+    //             height: '100vh',
+    //             fontSize: '1.2rem',
+    //             color: '#666'
+    //         }}>
+    //             正在加载...
+    //         </div>
+    //     );
+    // }
 
     function handleSelect() {
         if (!selectedActivity) {
@@ -510,3 +503,5 @@ const getStateText = (state) => {
             return state;
     }
 };
+
+export default withAuth(ImageManage);
