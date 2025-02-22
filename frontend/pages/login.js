@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react';
 import config from '../config';
 import { useRouter } from 'next/router';
 import { useAuth } from '../contexts/AuthContext';
+import 'whatwg-fetch';
 
 export default function Login() {
     const router = useRouter();
@@ -11,9 +12,15 @@ export default function Login() {
     const { user, setUser, loading } = useAuth();
 
     // 如果已经登录，跳转到admin页面
+    // useEffect(() => {
+    //     if (user) {
+    //         router.push('/admin');
+    //     }
+    // }, [user, router]);
     useEffect(() => {
         if (user) {
-            router.push('/admin');
+            const returnUrl = router.query.returnUrl || '/admin';
+            router.push(decodeURIComponent(returnUrl));
         }
     }, [user, router]);
 
@@ -47,7 +54,10 @@ export default function Login() {
 
                 // 更新用户状态
                 // 登录成功后跳转
-                router.push('/admin');
+                // router.push('/admin');
+                // 登录成功后跳转到返回URL
+                const returnUrl = router.query.returnUrl || '/admin';
+                router.push(decodeURIComponent(returnUrl));
             } else if (response.status === 400) {
                 setMessage("登录失败："+data.detail );
             } else {

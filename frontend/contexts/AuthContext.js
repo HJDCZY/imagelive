@@ -9,27 +9,34 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // 检查是否已经登录，向后端/check-login发送请求，后端检查JWT是否有效
         const checkLoginStatus = async () => {
             try {
-                
                 const response = await fetch(`${config.backendUrl}/check-login`, {
                     method: 'GET',
                     credentials: 'include',
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        // 添加其他必要的头信息
-                        'Origin': window.location.origin
                     },
+                    reffererPolicy: 'no-referrer-when-downgrade'
                 });
                 
+                // 处理所有响应状态
                 if (response.ok) {
                     const data = await response.json();
                     setUser(data.username);
+                } else if (response.status === 401) {
+                    // 未登录或token过期的情况
+                    console.log('用户未登录或会话已过期');
+                    setUser(null);
+                } else {
+                    // 其他错误状态
+                    console.error('检查登录状态失败:', response.status);
+                    setUser(null);
                 }
             } catch (error) {
-                console.error('检查登录状态失败:', error);
+                // 网络错误或其他异常
+                console.error('检查登录接口访问失败:', error);
                 setUser(null);
             } finally {
                 setLoading(false);
@@ -38,7 +45,7 @@ export function AuthProvider({ children }) {
 
         checkLoginStatus();
     }, []);
-
+    
     return (
         <AuthContext.Provider value={{ user, setUser, loading }}>
             {children}

@@ -4,7 +4,6 @@ from account import get_user_auth
 from jose import JWTError, jwt
 import os
 from config import config
-from fastapi import File, UploadFile
 from fastapi import Form, File, UploadFile
 import os
 

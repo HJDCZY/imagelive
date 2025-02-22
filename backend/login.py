@@ -5,8 +5,17 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import mysql_queries  
 import time
+from fastapi.middleware.cors import CORSMiddleware
 
 router = APIRouter()
+
+# router.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://hjdczy.top", "https://hjdczy.top"],  # 允许的源
+#     allow_credentials=True,  # 允许携带凭证
+#     allow_methods=["*"],    # 允许的 HTTP 方法
+#     allow_headers=["*"],    # 允许的 HTTP 头
+# )
 
 
 #使用OAuth2PasswordBearer类，jwt算法
@@ -46,7 +55,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 last_login_attempt = {}  # 用户名: 最后登录时间
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     # 检查登录频率
     username = form_data.username.replace("'", "").replace('"', '').replace(';', '')
     current_time = time.time()
@@ -82,30 +91,33 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "token_type": "bearer",
         "username": form_data.username
     })
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        samesite="none",
+        samesite="none",    # 跨站请求必须设置为 none
         path="/",
-        domain=None,  # 让浏览器自动设置域名
-        secure=True,
-        max_age=1800  # 30分钟过期
+        domain="hjdczy.top",  # 明确设置域名
+        secure=True,         # 跨站请求必须设置为 true
+        max_age=1800
     )
     return response
 
 @router.get("/check-login")
 async def check_login(request: Request):
-    # 打印所有请求头和 cookies，用于调试
-    # print("Headers:", request.headers)
-    # print("Cookies:", request.cookies)
+    print("Check-login - Current cookies:", request.cookies)
     
-    # 尝试获取 access_token 或 jwt cookie
-    access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
+    # 尝试获取 access_token
+    access_token = request.cookies.get("access_token")
     print("Access Token:", access_token)
     
-    # 检查 cookie 是否存在
-    if access_token is None:
+    # 检查 cookie 是否存在或为空
+    if not access_token or access_token == "":
         raise HTTPException(status_code=401, detail="未登录")
         
     try:
@@ -114,10 +126,10 @@ async def check_login(request: Request):
         username: str = payload.get("sub")
         print("Decoded username:", username)
         
-        if username is None:
+        if not username:
             raise HTTPException(status_code=401, detail="无效的凭证")
             
-        # 可选：验证用户是否仍然存在
+        # 验证用户是否存在
         if not authenticate_user(username):
             raise HTTPException(status_code=401, detail="用户不存在")
             
@@ -128,14 +140,42 @@ async def check_login(request: Request):
     
 
 @router.get("/logout")
-async def logout():
+async def logout(request: Request):
+    # 打印当前 cookies 用于调试
+    print("Logout - Current cookies:", request.cookies)
+    
     response = JSONResponse(content={"status": "logged out"})
-    response.delete_cookie(
+    
+    # 设置 CORS 头
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
+    # 删除所有相关的 cookie
+    for cookie_name in ["access_token", "jwt"]:
+        response.delete_cookie(
+            key=cookie_name,
+            path="/",
+            domain="hjdczy.top",
+            secure=True,
+            samesite="none",
+            httponly=True  # 添加这个确保和设置时的参数一致
+        )
+    
+    # 强制设置 cookie 为空值并立即过期
+    response.set_cookie(
         key="access_token",
-        path="/",
-        domain=None,  # 让浏览器自动设置域名
+        value="",
+        expires=0,
+        max_age=0,
+        httponly=True,
         secure=True,
-        samesite="none"
+        samesite="none",
+        domain="hjdczy.top",
+        path="/"
     )
+    
+    print("Logout - Response headers:", response.headers)
     return response
 

@@ -1,9 +1,12 @@
 import { AuthProvider } from '../contexts/AuthContext';
+import Head from 'next/head';
 
 function MyApp({ Component, pageProps }) {
     return (
-        //在每一个页面中使用AuthProvider组件包裹，以便在所有页面之间共享用户的登录状态。
         <AuthProvider>
+            <Head>
+                <meta name="referrer" content="no-referrer-when-downgrade" />
+            </Head>
             <Component {...pageProps} />
         </AuthProvider>
     );
