@@ -2,4 +2,7 @@
 mysqld --user=root &
 
 #启动后端服务
-uvicorn main:app --reload --port 39475
+
+uvicorn main:app --host 0.0.0.0 --port 47840 \
+  --ssl-keyfile=/hjdczy.top/cert/Nginx/hjdczy.top.key \
+  --ssl-certfile=/hjdczy.top/cert/Nginx/hjdczy.top.crt

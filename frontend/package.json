@@ -2,12 +2,13 @@
   "dependencies": {
     "next": "^15.1.7",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "whatwg-fetch": "^3.6.20"
   },
+
   "scripts": {
-  "dev": "next dev -p 55762",
-  "build": "next build",
-  "start": "next start",
-  "lint": "next lint"
-}
+    "dev": "node server.js",
+    "build": "next build",
+    "start": "NODE_ENV=production node server.js"
+  }
 }

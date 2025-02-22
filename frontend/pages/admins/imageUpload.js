@@ -1,32 +1,49 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../../contexts/AuthContext';
+// import { useRouter } from 'next/router';
+// import { useAuth } from '../../contexts/AuthContext';
 import config from '../../config';
+import withAuth from '../../contexts/withAuth';
 
 
-export default function ImageUpload() {
-    const { user, loading } = useAuth();
-    const router = useRouter();
-    const [pageReady, setPageReady] = useState(false);
+function ImageUpload({ user }) {  // 从 withAuth 获取 user
     const [activities, setActivities] = useState([]);
     const [selectedActivity, setSelectedActivity] = useState('');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [previewUrls, setPreviewUrls] = useState([]);
 
 
-    // 检查登录状态，未登录则跳转到登录页面
-    useEffect(() => {
-        if (!loading && !user) {
-            router.push('/login');
-        } else {
-            setPageReady(true);
-        }
-    }, [user, loading, router]);
-
     // 获取活动列表
     useEffect(() => {
         fetchActivities().then(data => setActivities(data));
     }, []);
+
+    // 清理预览URL
+    useEffect(() => {
+        return () => {
+            previewUrls.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [previewUrls]);
+
+    // 如果页面未准备好，显示加载状态
+    // if (!pageReady) {
+    //     return (
+    //         <div style={{
+    //             display: 'flex',
+    //             justifyContent: 'center',
+    //             alignItems: 'center',
+    //             height: '100vh',
+    //             fontSize: '1.2rem',
+    //             color: '#666'
+    //         }}>
+    //             正在加载...
+    //         </div>
+    //     );
+    // }
+
+    // 获取活动列表
+    // useEffect(() => {
+    //     fetchActivities().then(data => setActivities(data));
+    // }, []);
 
     // 处理文件选择
     const handleFileSelect = (event) => {
@@ -72,11 +89,11 @@ export default function ImageUpload() {
     };
 
     // 组件卸载时清理预览URL
-    useEffect(() => {
-        return () => {
-            previewUrls.forEach(url => URL.revokeObjectURL(url));
-        };
-    }, [previewUrls]);
+    // useEffect(() => {
+    //     return () => {
+    //         previewUrls.forEach(url => URL.revokeObjectURL(url));
+    //     };
+    // }, [previewUrls]);
 
     return (
         <div style={{ padding: '20px' }}>
@@ -202,3 +219,5 @@ function fetchActivities() {
         activityLabel: label || name 
     })));
 }
+
+export default withAuth(ImageUpload);

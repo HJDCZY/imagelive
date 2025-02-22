@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import config from '../config';
 import { useAuth } from '../contexts/AuthContext';
+import withAuth from '../contexts/withAuth';
 
 
 // 账号管理
 // 图片管理
 // 图片上传
 // 活动管理
-//页面的翻译
 
+//页面的翻译
 const pageMap = {
     accountManage: '账号管理',
     imageManage: '图片管理',
@@ -17,68 +18,73 @@ const pageMap = {
     activityManage: '活动管理'
 };
 
-//每30秒检查一次登录状态，如果未登录，强制刷新页面
-setInterval(() => {
-    fetch(`${config.backendUrl}/check-login`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Origin': window.location.origin
-        }
 
-    }).then(response => {
-        if (!response.ok) {
-            window.location.reload();
-        }
-    }
-    );
-}, 30000);
 
-export default function Admin() {
+function Admin({ user: authUser }) {  // 重命名 props 中的 user 为 authUser
+    // const router = useRouter();
+    // const [pageReady, setPageReady] = useState(false);  // 添加页面准备状态
+    // const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
+    // const [currentPage, setCurrentPage] = useState('accountManage');
+
     const router = useRouter();
-    const [message, setMessage] = useState('');
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [pageReady, setPageReady] = useState(false);  // 添加页面准备状态
-    const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
+    const { setUser } = useAuth();  // 只获取需要的 setUser
     const [currentPage, setCurrentPage] = useState('accountManage');
 
-    // 检查登录状态
-    useEffect(() => {
-        if (!authLoading) {  // 使用 AuthContext 的 loading 状态
-            setLoading(false);  // 更新组件的 loading 状态
-            if (!user) {
-                router.push('/login');
-            } else {
-                setPageReady(true);
-            }
-        }
-    }, [user, authLoading, router]);  // 依赖项改为 authLoading
+    // // 检查登录状态
+    // useEffect(() => {
+    //     if (!authLoading) {  // 使用 AuthContext 的 loading 状态
+    //         setLoading(false);  // 更新组件的 loading 状态
+    //         if (!user) {
+    //             router.push('/login');
+    //         } else {
+    //             setPageReady(true);
+    //         }
+    //     }
+    // }, [user, authLoading, router]);  // 依赖项改为 authLoading
 
+    //每30秒检查一次登录状态，如果未登录，强制刷新页面
+    useEffect(() => {
+        const checkLoginInterval = setInterval(() => {
+            fetch(`${config.backendUrl}/check-login`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                }
+            }).then(response => {
+                if (!response.ok) {
+                    router.reload();
+                }
+            });
+        }, 30000);
+
+        // 清理定时器
+        return () => clearInterval(checkLoginInterval);
+    }, [router]);
 
     function logout() {
+               // 前端调用后端接口注销
         fetch(`${config.backendUrl}/logout`, {
             method: 'GET',
             credentials: 'include',
             headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Origin': window.location.origin
+                'Accept': 'application/json'
             }
         }).then(response => {
             if (response.ok) {
+                // 清除前端状态
                 setUser(null);
-                router.push('/login');
+                // 可选：强制刷新页面
+                window.location.reload();
             }
         });
     }
 
     // 如果页面还没准备好或正在加载，显示加载状态
-    if (authLoading || !pageReady) {
-        return <div>Loading...</div>;
-    }
+    // if (authLoading || !pageReady) {
+    //     return <div>Loading...</div>;
+    // }
 
     // 只在页面准备就绪后渲染实际内容
     return (
@@ -87,7 +93,7 @@ export default function Admin() {
             <div style={{ flex: 1, padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <span style={{ marginRight: '20px' }}>当前用户：{user}</span>
+                        <span style={{ marginRight: '20px' }}>当前用户：{authUser}</span>
                         <span style={{ marginRight: '20px' }}>当前页面：{pageMap[currentPage]}</span>
                     </div>
                 <button 
@@ -180,3 +186,5 @@ const navItemStyle = {
         backgroundColor: '#e0e0e0'
     }
 };
+
+export default withAuth(Admin);

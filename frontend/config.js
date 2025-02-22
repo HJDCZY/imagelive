@@ -1,5 +1,5 @@
 const config = {
-    backendUrl : 'http://localhost:39475'
+    backendUrl : 'https://hjdczy.top:47840'
 }
 
 export default config;
