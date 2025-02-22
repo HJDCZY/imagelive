@@ -2,21 +2,18 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../../contexts/AuthContext';
 import config from '../../config';
+import withAuth from '../../contexts/withAuth';
 
 
-export default function ActivityManage() {
+function ActivityManage({ user }) {  // 从 withAuth 获取 user
     const [activities, setActivities] = useState([]);
-    const { user, loading } = useAuth();
-    const router = useRouter();
+    // const { user, loading } = useAuth();
+    // const router = useRouter();
     
     // 检查登录状态，未登录则跳转到登录页面
     useEffect(() => {
-        if (!loading && !user) {
-            router.push('/login');
-        } else {
-            getActivities();
-        }
-    }, [user, loading, router]);
+        getActivities();
+    }, []);
 
     const getActivities = () => {
         fetch(`${config.backendUrl}/getActivities`, {
@@ -345,3 +342,6 @@ function NewActivityButton() {
         </div>
     );
 }
+
+
+export default withAuth(ActivityManage);

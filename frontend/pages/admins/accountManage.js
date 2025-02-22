@@ -1,30 +1,30 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useAuth } from '../../contexts/AuthContext';
+import withAuth from '../../contexts/withAuth';
 import config from '../../config';
 
-export default function AccountManage() {
+function AccountManage({ user }) {  // 从 withAuth 获取 user
     const router = useRouter();
-    const [loading, setLoading] = useState(true);
+    // const [loading, setLoading] = useState(true);
     const [pageReady, setPageReady] = useState(false);
     const [showChangePassword, setShowChangePassword] = useState(false); // 添加新状态
     // 检查登录状态
-    const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
-    useEffect(() => {
-        if (!authLoading) {  // 使用 AuthContext 的 loading 状态
-            setLoading(false);  // 更新组件的 loading 状态
-            if (!user) {
-                router.push('/login');
-            } else {
-                setPageReady(true);
-            }
-        }
-    }, [user, authLoading, router]);  // 依赖项改为 authLoading
+    // const { user, setUser, loading: authLoading } = useAuth();  // 从 AuthContext 获取 loading 状态
+    // useEffect(() => {
+    //     if (!authLoading) {  // 使用 AuthContext 的 loading 状态
+    //         setLoading(false);  // 更新组件的 loading 状态
+    //         if (!user) {
+    //             router.push('/login');
+    //         } else {
+    //             setPageReady(true);
+    //         }
+    //     }
+    // }, [user, authLoading, router]);  // 依赖项改为 authLoading
 
     // 如果页面还没准备好或正在加载，显示加载状态
-    if (authLoading || !pageReady) {
-        return <div>Loading...</div>;
-    }
+    // if (authLoading || !pageReady) {
+    //     return <div>Loading...</div>;
+    // }
 
     function changePassword( ) {
         const oldPassword = document.getElementById('old-password').value;
@@ -342,40 +342,32 @@ function AddNewUser() {
     const [loading, setLoading] = useState(true);
     const [pageReady, setPageReady] = useState(false);
     const [userAuth, setUserAuth] = useState(null);
-    const { user, loading: authLoading } = useAuth();
+    // const { user, loading: authLoading } = useAuth();
 
     useEffect(() => {
-        if (!authLoading && user) {
-            // 获取用户权限
-            fetch(`${config.backendUrl}/getauth`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.auth) {
-                    setUserAuth(data.auth);
-                    setPageReady(data.auth === 'admin');
-                }
-                setLoading(false);
-            })
-            .catch(error => {
-                console.error('获取权限失败:', error);
-                setLoading(false);
-            });
-        } else if (!user) {
-            router.push('/login');
-        }
-    }, [user, authLoading, router]);
+        fetch(`${config.backendUrl}/getauth`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.auth) {
+                setUserAuth(data.auth);
+            }
+        })
+        .catch(error => {
+            console.error('获取权限失败:', error);
+        });
+    }, []);
 
-    if (loading || authLoading) {
-        return <div>加载中...</div>;
-    }
+    // if (loading || authLoading) {
+    //     return <div>加载中...</div>;
+    // }
 
-    if (!pageReady || userAuth !== 'admin') {
+    if (userAuth !== 'admin') {
         return null;
     }
     return (
@@ -510,3 +502,4 @@ function AddNewUserInput () {
     );
 }
 
+export default withAuth(AccountManage);
