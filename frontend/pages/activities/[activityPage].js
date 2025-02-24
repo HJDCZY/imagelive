@@ -2,6 +2,41 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import config from '../../config';
 
+
+const fadeInKeyframes = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const fetchWithRetry = async (url, options, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, {
+                ...options,
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response;
+        } catch (error) {
+            console.error(`尝试 ${i + 1}/${maxRetries} 失败:`, error);
+            if (i === maxRetries - 1) throw error;
+            // 等待递增的时间后重试
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+    }
+};
+
 export default function ActivityPage() {
     const router = useRouter();
     const [activity, setActivity] = useState(null);
@@ -12,25 +47,58 @@ export default function ActivityPage() {
     const [likedActivity, setLikedActivity] = useState(false); // 添加活动点赞状态
     const [viewUpdated, setViewUpdated] = useState(false); // 添加状态跟踪是否已更新浏览量
     const [coverImage, setCoverImage] = useState(null);
+    const [polling, setPolling] = useState(true); // 添加轮询控制状态
+    const [imageLoading, setImageLoading] = useState(true);
+    
+    // 添加是否显示新图片提示的状态
+    const [newImagesCount, setNewImagesCount] = useState(0);
 
     useEffect(() => {
         const getActivityData = async () => {
             if (!router.query.activityPage) return;
+            
             try {
                 // 获取封面图片
-                const coverResponse = await fetch(
+                const coverResponse = await fetchWithRetry(
                     `${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`,
-                    {
-                        method: 'GET',
-                        credentials: 'include',
-                    }
-                );
+                    { method: 'GET' }
+                ).catch(() => null); // 如果获取封面失败，不影响其他功能
 
-                if (coverResponse.ok) {
+                if (coverResponse?.ok) {
                     setCoverImage(`${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`);
                 }
 
-                // ...existing activity and images fetching code...
+                // 获取活动信息
+                const [activityResponse, imagesResponse] = await Promise.all([
+                    fetchWithRetry(
+                        `${config.backendUrl}/frontgetactivity/${router.query.activityPage}`,
+                        { method: 'GET' }
+                    ),
+                    fetchWithRetry(
+                        `${config.backendUrl}/getImagesFrontend/${router.query.activityPage}`,
+                        { method: 'GET' }
+                    )
+                ]);
+
+                // 处理活动数据
+                const activityData = await activityResponse.json();
+                const formattedActivity = {
+                    name: activityData[0][0],
+                    label: activityData[0][1],
+                    date: activityData[0][2],
+                    views: activityData[0][3],
+                    likes: activityData[0][4],
+                    shares: activityData[0][5],
+                    location: activityData[0][6]
+                };
+                setActivity(formattedActivity);
+
+                // 处理图片数据
+                const imagesData = await imagesResponse.json();
+                if (imagesData.success) {
+                    setImages(imagesData.images);
+                }
+
             } catch (err) {
                 setError(err.message);
                 console.error('获取数据失败:', err);
@@ -39,7 +107,9 @@ export default function ActivityPage() {
             }
         };
 
-        getActivityData();
+        if (router.query.activityPage) {
+            getActivityData();
+        }
     }, [router.query.activityPage]);
 
     useEffect(() => {
@@ -142,6 +212,70 @@ export default function ActivityPage() {
 
         getActivityData();
     }, [router.query.activityPage]);
+
+
+    // 添加轮询效果
+    useEffect(() => {
+        let pollInterval;
+
+        if (polling && router.query.activityPage) {
+            pollInterval = setInterval(pollImages, 5000); // 每5秒轮询一次
+        }
+
+        return () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        };
+    }, [router.query.activityPage, polling]);
+
+    // 在组件卸载时停止轮询
+    useEffect(() => {
+        return () => setPolling(false);
+    }, []);
+
+    // 在组件挂载时添加动画样式
+    useEffect(() => {
+        // 添加样式到 head
+        const styleElement = document.createElement('style');
+        styleElement.innerHTML = fadeInKeyframes;
+        document.head.appendChild(styleElement);
+
+        // 清理函数
+        return () => {
+            document.head.removeChild(styleElement);
+        };
+    }, []);
+
+
+    // 修改轮询函数以支持新图片提示
+    const pollImages = async () => {
+        if (!router.query.activityPage) return;
+
+        try {
+            const imagesResponse = await fetchWithRetry(
+                `${config.backendUrl}/getImagesFrontend/${router.query.activityPage}`,
+                { method: 'GET' }
+            );
+
+            const imagesData = await imagesResponse.json();
+            if (imagesData.success) {
+                setImages(prevImages => {
+                    if (imagesData.images.length > prevImages.length) {
+                        const newCount = imagesData.images.length - prevImages.length;
+                        setNewImagesCount(newCount);
+                        setTimeout(() => setNewImagesCount(0), 5000);
+                    }
+                    return imagesData.images;
+                });
+            }
+        } catch (error) {
+            console.error('轮询图片失败:', error);
+            // 轮询失败时不设置错误状态，避免影响用户体验
+        }
+    };
+
+
 
     if (loading) {
         return (
@@ -343,16 +477,39 @@ export default function ActivityPage() {
                 backgroundColor: '#f8f9fa'
             }}>
                 {coverImage ? (
-                    <>
-                        <img
-                            src={coverImage}
-                            alt={activity.label || activity.name}
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                            }}
-                        />
+    <>
+        <img
+            src={coverImage}
+            alt={activity.label || activity.name}
+            style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: imageLoading ? 0 : 1,
+                transition: 'opacity 0.3s ease-in-out'
+            }}
+            onLoad={() => setImageLoading(false)}
+            onError={(e) => {
+                console.error('封面图片加载失败');
+                setImageLoading(false);
+                e.target.style.display = 'none';
+            }}
+        />
+        {imageLoading && (
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#f8f9fa'
+            }}>
+                加载中...
+            </div>
+        )}
                         {/* 渐变遮罩层 */}
                         <div style={{
                             position: 'absolute',
@@ -427,6 +584,23 @@ export default function ActivityPage() {
                     </div>
                 )}
             </div>
+
+            {newImagesCount > 0 && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    padding: '10px 20px',
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    borderRadius: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    zIndex: 1000,
+                    animation: 'fadeIn 0.3s ease-in-out'
+                }}>
+                    新增 {newImagesCount} 张图片
+                </div>
+            )}
     
             {/* 图片展示区域 */}
             <div style={{
@@ -455,3 +629,14 @@ export default function ActivityPage() {
         </div>
     );
 }
+
+
+// // 添加淡入动画样式
+// const style = document.createElement('style');
+// style.textContent = `
+//     @keyframes fadeIn {
+//         from { opacity: 0; transform: translateY(-10px); }
+//         to { opacity: 1; transform: translateY(0); }
+//     }
+// `;
+// document.head.appendChild(style);
