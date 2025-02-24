@@ -10,32 +10,7 @@ const fadeInKeyframes = `
   }
 `;
 
-const fetchWithRetry = async (url, options, maxRetries = 3) => {
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            const response = await fetch(url, {
-                ...options,
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    ...(options.headers || {})
-                }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            return response;
-        } catch (error) {
-            console.error(`尝试 ${i + 1}/${maxRetries} 失败:`, error);
-            if (i === maxRetries - 1) throw error;
-            // 等待递增的时间后重试
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-        }
-    }
-};
+
 
 export default function ActivityPage() {
     const router = useRouter();
@@ -49,9 +24,32 @@ export default function ActivityPage() {
     const [coverImage, setCoverImage] = useState(null);
     const [polling, setPolling] = useState(true); // 添加轮询控制状态
     const [imageLoading, setImageLoading] = useState(true);
+    const [isOnline, setIsOnline] = useState(true);
     
     // 添加是否显示新图片提示的状态
     const [newImagesCount, setNewImagesCount] = useState(0);
+
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            if (router.query.activityPage) {
+                getActivityData();
+            }
+        };
+        
+        const handleOffline = () => {
+            setIsOnline(false);
+            setError('网络连接已断开，请检查网络设置');
+        };
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [router.query.activityPage]);
 
     useEffect(() => {
         const getActivityData = async () => {
@@ -215,11 +213,12 @@ export default function ActivityPage() {
 
 
     // 添加轮询效果
+    // 修改轮询逻辑，添加网络状态检查
     useEffect(() => {
         let pollInterval;
 
-        if (polling && router.query.activityPage) {
-            pollInterval = setInterval(pollImages, 5000); // 每5秒轮询一次
+        if (polling && router.query.activityPage && isOnline) {
+            pollInterval = setInterval(pollImages, 5000);
         }
 
         return () => {
@@ -227,7 +226,7 @@ export default function ActivityPage() {
                 clearInterval(pollInterval);
             }
         };
-    }, [router.query.activityPage, polling]);
+    }, [router.query.activityPage, polling, isOnline]);
 
     // 在组件卸载时停止轮询
     useEffect(() => {
@@ -246,6 +245,48 @@ export default function ActivityPage() {
             document.head.removeChild(styleElement);
         };
     }, []);
+
+    const fetchWithRetry = async (url, options, maxRetries = 3) => {
+        const timeout = 10000; // 10秒超时
+        
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+                const response = await fetch(url, {
+                    ...options,
+                    credentials: 'include',
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        ...(options.headers || {})
+                    },
+                    keepalive: true // 保持连接活跃
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return response;
+            } catch (error) {
+                const isLastAttempt = i === maxRetries - 1;
+                const isTimeout = error.name === 'AbortError';
+                const waitTime = Math.min(1000 * Math.pow(2, i), 8000); // 指数退避，最大等待8秒
+                
+                console.error(`请求失败 (${i + 1}/${maxRetries}):`, error.message);
+                
+                if (isLastAttempt) throw error;
+                if (!isTimeout) await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        }
+    };
 
 
     // 修改轮询函数以支持新图片提示
