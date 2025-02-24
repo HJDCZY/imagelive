@@ -27,11 +27,13 @@ app.add_middleware(
     allow_origins=[
         "http://hjdczy.top:47839",    # 前端地址
         "https://hjdczy.top:47839",
-        "http://hjdczy.top:47840",    # 添加后端地址
+        "http://hjdczy.top:47840",    # 后端地址
         "https://hjdczy.top:47840",
+        "http://localhost:47839",      # 本地开发地址
+        "http://localhost:47840",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],              # 允许所有方法
     allow_headers=[
         "Content-Type",
         "Accept",
@@ -39,7 +41,8 @@ app.add_middleware(
         "Origin",
         "X-Requested-With",
         "Cookie",
-        "isYouABrowser"    # 添加自定义请求头
+        "isYouABrowser",
+        "Access-Control-Allow-Origin"
     ],
     expose_headers=["Set-Cookie"],
     max_age=3600,
