@@ -4,6 +4,8 @@ from account import get_user_auth
 from jose import JWTError, jwt
 import os
 from config import config
+#传文件
+from fastapi import File, UploadFile
 
 router = APIRouter()    
 
@@ -63,8 +65,20 @@ async def update_activity(request: Request):
     
 
 
+from fastapi import Form, File, UploadFile
+import json
+
 @router.post("/addActivity")
-async def add_activity(request: Request):
+async def add_activity(
+    request: Request,
+    cover: UploadFile = File(None),
+    name: str = Form(...),
+    label: str = Form(...),
+    date: str = Form(...),
+    location: str = Form(...),
+    likes: int = Form(0),
+    shares: int = Form(0)
+):
     # 确认请求用户有contributer或者admin的权限
     access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
     if access_token is None:
@@ -76,19 +90,33 @@ async def add_activity(request: Request):
         auth = await get_user_auth(username)
         if auth is not None:
             if auth == "contributer" or auth == "admin":
-                data = await request.json()
-                name = data.get('name')
-                label = data.get('label')
-                date = data.get('date')
-                location = data.get('location')
-                likes = data.get('likes')
-                shares = data.get('shares')
-                # 向数据库插入数据
+                # 向数据库插入活动数据
                 query = "INSERT INTO activities (name, label, date, location, likes, shares) VALUES (%s, %s, %s, %s, %s, %s)"
                 try:
-                    result = mysql_queries.query(mysql_queries.connection, query, (name, label, date, location, likes, shares))
+                    result = mysql_queries.query(
+                        mysql_queries.connection, 
+                        query, 
+                        (name, label, date, location, likes, shares)
+                    )
+                    
                     if result:
-                       # 未完成：更新活动名称时更新数据库中照片的所属活动
+                        # 如果有上传封面图片，保存图片
+                        if cover:
+                            # 获取文件扩展名
+                            file_extension = os.path.splitext(cover.filename)[1]
+                            # 使用活动名称作为文件名，'headimagefolder'
+                            file_path = os.path.join(config['headimagefolder'], f"{name}{file_extension}")
+                            
+                            # 保存文件
+                            try:
+                                with open(file_path, "wb") as buffer:
+                                    content = await cover.read()
+                                    buffer.write(content)
+                                
+                            except Exception as e:
+                                # 如果保存图片失败，记录错误但不影响活动创建
+                                print(f"保存封面图片失败: {str(e)}")
+                                
                         return {"success": True}
                     raise HTTPException(status_code=400, detail="添加失败")
                 except Exception as e:
@@ -97,7 +125,6 @@ async def add_activity(request: Request):
         raise HTTPException(status_code=400, detail="用户不存在")
     except JWTError:
         raise HTTPException(status_code=400, detail="未登录")
-    
                     
 
 @router.post("/deleteActivity")
@@ -141,6 +168,20 @@ async def delete_activity(request: Request):
                                         continue  # 继续尝试其他扩展名的文件
                 except Exception as e:
                     raise HTTPException(status_code=400, detail=f"删除照片失败: {str(e)}")
+                
+                #删除封面图，可能是jpg或者png
+                file_paths = [
+                    os.path.join(config['headimagefolder'], name + ext)
+                    for ext in ['.png', '.jpg']
+                ]
+                for path in file_paths:
+                    if os.path.exists(path):
+                        try:
+                            os.remove(path)
+                            break  # 找到并删除文件后就跳出内层循环
+                        except Exception as e:
+                            print(f"删除文件 {path} 失败: {str(e)}")
+                            continue
                 
                 #删除数据库中的活动
                 query = "DELETE FROM activities WHERE name = %s"
