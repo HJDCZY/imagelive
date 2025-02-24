@@ -66,6 +66,46 @@ async def get_images_backend(request: Request):
     except JWTError:
         raise HTTPException(status_code=400, detail="未登录")
     
+
+@router.get("/getImagesFrontend/{selectedActivity}")
+async def get_images_frontend(selectedActivity: str):
+
+    # 查询数据库
+    query = "SELECT * FROM photos WHERE activity_name = %s AND state = 'approved'"
+    result = mysql_queries.query(mysql_queries.connection, query, (selectedActivity,))
+    
+    #从config['imagefolder']查询id.png或者是id.jpg的文件，并且将一系列文件返回给前端，只返回审核通过的图片
+    # 首先返回路径，之后再写一个接口，根据路径返回图片
+    if result:
+        images = []
+        for photo in result:
+            photo_id = str(photo[0])
+            # 检查文件是否存在
+            jpg_path = os.path.join(config['imagefolder'], f"{photo_id}.jpg")
+            png_path = os.path.join(config['imagefolder'], f"{photo_id}.png")
+            
+            file_url = None
+            if os.path.exists(jpg_path):
+                file_url = f"/image/{photo_id}"
+            elif os.path.exists(png_path):
+                file_url = f"/image/{photo_id}"
+            
+            if file_url:
+                images.append({
+                    'id': photo_id,
+                    'url': file_url,
+                    'upload_time': photo[2].strftime("%Y-%m-%d %H:%M:%S"),
+                    'uploader': photo[3],
+                    'state': photo[4],
+                    'likes': photo[5],
+                    'reviewer': photo[6],
+
+                })
+            
+        return {"success": True, "images": images}
+    else:
+        return {"success": False, "images": []}
+    
                     
             
 @router.get("/image/{photo_id}")
@@ -77,6 +117,22 @@ async def get_image(photo_id: str):
     jpg_path = os.path.join(config['imagefolder'], f"{photo_id}.jpg")
     png_path = os.path.join(config['imagefolder'], f"{photo_id}.png")
     
+    if os.path.exists(jpg_path):
+        return FileResponse(jpg_path)
+    elif os.path.exists(png_path):
+        return FileResponse(png_path)
+    raise HTTPException(status_code=404, detail="图片不存在")
+
+
+@router.get("/getCoverImage")
+async def get_cover_image(request: Request):
+    # 提取请求体当中的SelectedActivity
+    selected_activity = request.query_params.get("selectedActivity")
+    # 直接去'headimagefolder'文件夹下找selectedActivity.png或者selectedActivity.jpg
+    # 如果找到就返回，找不到就返回404
+    jpg_path = os.path.join(config['headimagefolder'], f"{selected_activity}.jpg")
+    png_path = os.path.join(config['headimagefolder'], f"{selected_activity}.png")
+
     if os.path.exists(jpg_path):
         return FileResponse(jpg_path)
     elif os.path.exists(png_path):

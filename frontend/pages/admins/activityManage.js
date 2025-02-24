@@ -218,31 +218,66 @@ function NewActivityButton() {
         likes: 0,
         shares: 0
     });
+    const [coverImage, setCoverImage] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState(null);
 
-    const handleSubmit = () => {
-        fetch(`${config.backendUrl}/addActivity`, {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newActivity)
-        })
-        .then(response => response.json())
-        .then(data => {
+    // 处理图片选择
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setCoverImage(file);
+            // 创建预览URL
+            const url = URL.createObjectURL(file);
+            setPreviewUrl(url);
+        }
+    };
+
+    const handleSubmit = async () => {
+        const formData = new FormData();
+        formData.append('name', newActivity.name);
+        formData.append('label', newActivity.label);
+        formData.append('date', newActivity.date);
+        formData.append('location', newActivity.location);
+        formData.append('likes', newActivity.likes);
+        formData.append('shares', newActivity.shares);
+        
+        if (coverImage) {
+            formData.append('cover', coverImage);
+        }
+
+        try {
+            const response = await fetch(`${config.backendUrl}/addActivity`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData // 不需要设置 Content-Type，浏览器会自动设置
+            });
+
+            const data = await response.json();
             if (data.success) {
                 alert('活动添加成功');
                 setShowForm(false);
+                // 清理预览URL
+                if (previewUrl) {
+                    URL.revokeObjectURL(previewUrl);
+                }
                 window.location.reload();
             } else {
                 alert('添加失败：' + data.detail);
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('添加失败:', error);
             alert('添加失败');
-        });
+        }
     };
+
+    // 组件卸载时清理预览URL
+    useEffect(() => {
+        return () => {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+        };
+    }, [previewUrl]);
 
     return (
         <div style={{ margin: '20px 0' }}>
@@ -267,6 +302,35 @@ function NewActivityButton() {
                     borderRadius: '8px',
                     marginTop: '10px'
                 }}>
+
+<div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', marginBottom: '10px' }}>
+                            活动封面：
+                        </label>
+                        <input
+                            type="file"
+                            // {/*.jpg .png*/}
+                            accept=" image/jpeg, image/png"
+                            onChange={handleImageChange}
+                            style={{ marginBottom: '10px' }}
+                        />
+                        {previewUrl && (
+                            <div style={{ marginTop: '10px' }}>
+                                <img
+                                    src={previewUrl}
+                                    alt="封面预览"
+                                    style={{
+                                        maxWidth: '200px',
+                                        maxHeight: '200px',
+                                        objectFit: 'cover',
+                                        borderRadius: '4px'
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+
                     <div style={{ marginBottom: '10px' }}>
                         <label>活动名称（仅接受ASCII字符）：</label>
                         <input
