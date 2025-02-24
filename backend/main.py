@@ -33,7 +33,7 @@ app.add_middleware(
         "http://localhost:47840",
     ],
     allow_credentials=True,
-    allow_methods=["*"],              # 允许所有方法
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=[
         "Content-Type",
         "Accept",
@@ -42,9 +42,11 @@ app.add_middleware(
         "X-Requested-With",
         "Cookie",
         "isYouABrowser",
-        "Access-Control-Allow-Origin"
+        "Access-Control-Allow-Origin",
+        "Set-Cookie",
+        "Cache-Control",
+        "Pragma",
     ],
-    expose_headers=["Set-Cookie"],
     max_age=3600,
 )
 
