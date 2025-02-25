@@ -11,7 +11,6 @@ const fadeInKeyframes = `
 `;
 
 
-
 export default function ActivityPage() {
     const router = useRouter();
     const [activity, setActivity] = useState(null);
@@ -29,6 +28,9 @@ export default function ActivityPage() {
     const minLoadingTime = 2000; // 最小加载时间为2秒
     const [displayMode, setDisplayMode] = useState('grid'); // 'waterfall', 'grid', 'timeline'
     const [sortMode, setSortMode] = useState('timeDesc'); // 'timeAsc', 'timeDesc', 'likes'
+    const [columnsCount, setColumnsCount] = useState(3); // 默认每行3张图片
+    const [showShareToast, setShowShareToast] = useState(false);
+    const [hasShared, setHasShared] = useState(false);
     
     // 添加是否显示新图片提示的状态
     const [newImagesCount, setNewImagesCount] = useState(0);
@@ -329,6 +331,43 @@ export default function ActivityPage() {
         }
     };
 
+    const handleShare = async () => {
+        if (hasShared) return; // 如果已经转发过，直接返回
+    
+        try {
+            const currentUrl = window.location.href;
+            await navigator.clipboard.writeText(currentUrl);
+    
+            const response = await fetch(
+                `${config.backendUrl}/shareActivity?name=${router.query.activityPage}`,
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+    
+            if (!response.ok) {
+                throw new Error('分享失败');
+            }
+    
+            const data = await response.json();
+            if (data.success) {
+                setActivity(prev => ({
+                    ...prev,
+                    shares: prev.shares + 1
+                }));
+                setHasShared(true); // 标记为已转发
+                setShowShareToast(true);
+                setTimeout(() => setShowShareToast(false), 3000);
+            }
+        } catch (error) {
+            console.error('分享失败:', error);
+        }
+    };
 
 
     if (loading || initialLoading) {
@@ -363,8 +402,8 @@ export default function ActivityPage() {
         );
     }
 
-     // 添加点赞活动的函数
-     const handleLikeActivity = async () => {
+    // 添加点赞活动的函数
+    const handleLikeActivity = async () => {
         if (likedActivity) return; // 如果已经点赞过，直接返回
 
         try {
@@ -398,6 +437,7 @@ export default function ActivityPage() {
         }
     };
 
+    // 修改点赞按钮样式
     const activityLikeButton = (
         <button 
             onClick={handleLikeActivity}
@@ -406,13 +446,14 @@ export default function ActivityPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                padding: '8px 16px',
-                backgroundColor: likedActivity ? '#6c757d' : '#f8f9fa',
-                color: likedActivity ? 'white' : '#212529',
-                border: '1px solid #dee2e6',
+                padding: '6px 12px', // 减小内边距
+                backgroundColor: likedActivity ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.3)', // 改为半透明背景
+                color: 'white', // 文字始终为白色
+                border: '1px solid rgba(255, 255, 255, 0.2)', // 添加微弱的边框
                 borderRadius: '4px',
                 cursor: likedActivity ? 'default' : 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                backdropFilter: 'blur(4px)' // 添加磨砂效果
             }}
         >
             <span>❤️</span>
@@ -428,7 +469,7 @@ export default function ActivityPage() {
                 borderRadius: '8px',
                 overflow: 'hidden',
                 position: 'relative',
-                paddingTop: '100%', // 创建正方形容器
+                paddingTop: '100%',
                 backgroundColor: '#f8f9fa'
             }}
         >
@@ -449,21 +490,22 @@ export default function ActivityPage() {
                 disabled={likedImages.has(image.id)}
                 style={{
                     position: 'absolute',
-                    bottom: '10px',
-                    right: '10px',
+                    bottom: '0.5rem',
+                    right: '0.5rem',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
-                    padding: '6px 12px',
+                    gap: '0.25rem',
+                    padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)',
                     backgroundColor: likedImages.has(image.id) ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.8)',
                     color: likedImages.has(image.id) ? 'white' : '#212529',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: '0.25rem',
                     cursor: likedImages.has(image.id) ? 'default' : 'pointer',
-                    backdropFilter: 'blur(4px)'
+                    backdropFilter: 'blur(4px)',
+                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' // 响应式字体大小
                 }}
             >
-                <span>❤️</span>
+                <span style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>❤️</span>
                 <span>{image.likes}</span>
             </button>
         </div>
@@ -488,7 +530,8 @@ export default function ActivityPage() {
             );
 
             if (!response.ok) {
-                throw new Error('点赞失败');
+                // throw new Error('点赞失败');
+                console.error('点赞失败');
             }
 
             const data = await response.json();
@@ -509,28 +552,25 @@ export default function ActivityPage() {
 
     const getDisplayStyle = (mode) => {
         switch (mode) {
-            case 'waterfall':
-                return {
-                    columnCount: 3,
-                    columnGap: '20px',
-                    '& > div': {
-                        marginBottom: '20px',
-                        breakInside: 'avoid'
-                    }
-                };
             case 'grid':
                 return {
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                    gap: '20px'
+                    gridTemplateColumns: `repeat(${columnsCount}, 1fr)`, // 使用用户选择的列数
+                    gap: '0.1vw',
+                    margin: '0 auto',
+                    width: '100%'
                 };
             case 'timeline':
+                // 保持时间轴的样式不变
                 return {
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '20px',
-                    maxWidth: '800px',
-                    margin: '0 auto'
+                    gap: '0.5cm',
+                    width: '100%',
+                    margin: '0 auto',
+                    '@media screen and (maxWidth: 14cm)': {
+                        gap: '0.3cm'
+                    }
                 };
             default:
                 return {};
@@ -599,7 +639,7 @@ export default function ActivityPage() {
         return (
             <div style={{
                 position: 'relative',
-                marginBottom: '40px',
+                marginBottom: '2rem',
                 width: '100%'
             }}>
                 {/* 时间分隔线 */}
@@ -632,13 +672,28 @@ export default function ActivityPage() {
                 
                 {/* 图片网格 */}
                 <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                    gap: '20px',
-                    padding: '20px',
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '1rem',
+                padding: '1rem',
+                backgroundColor: 'white',
+                borderRadius: '0.5rem',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                '@media (max-width: 1200px)': {
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '0.5rem',
+                    padding: '0.5rem'
+                },
+                '@media (max-width: 768px)': {
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '0.25rem',
+                    padding: '0.25rem'
+                },
+                '@media (max-width: 480px)': {
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '0.125rem',
+                    padding: '0.125rem'
+                }
                 }}>
                     {images.map(image => (
                         <div 
@@ -666,21 +721,22 @@ export default function ActivityPage() {
                                 disabled={likedImages.has(image.id)}
                                 style={{
                                     position: 'absolute',
-                                    bottom: '10px',
-                                    right: '10px',
+                                    bottom: '0.5rem',
+                                    right: '0.5rem',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '5px',
-                                    padding: '6px 12px',
+                                    gap: '0.25rem',
+                                    padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)',
                                     backgroundColor: likedImages.has(image.id) ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.8)',
                                     color: likedImages.has(image.id) ? 'white' : '#212529',
                                     border: 'none',
-                                    borderRadius: '4px',
+                                    borderRadius: '0.25rem',
                                     cursor: likedImages.has(image.id) ? 'default' : 'pointer',
-                                    backdropFilter: 'blur(4px)'
+                                    backdropFilter: 'blur(4px)',
+                                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)'
                                 }}
                             >
-                                <span>❤️</span>
+                                <span style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>❤️</span>
                                 <span>{image.likes}</span>
                             </button>
                         </div>
@@ -751,40 +807,54 @@ export default function ActivityPage() {
                             background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
                             color: 'white'
                         }}>
-                            {/* 活动标题和信息 */}
+                        {/* 活动标题和信息容器 */}
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column', // 改为垂直布局
+                            marginBottom: '15px',
+                            maxWidth: '80%' // 控制整体容器宽度
+                        }}>
+                            {/* 标题 */}
+                            <h1 style={{ 
+                                margin: 0,
+                                marginBottom: '0.5rem',
+                                fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
+                                textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                                wordWrap: 'break-word',
+                                overflowWrap: 'break-word',
+                                whiteSpace: 'normal',
+                                lineHeight: '1.2'
+                            }}>
+                                {activity.label || activity.name}
+                            </h1>
+                            
+                            {/* 日期和地点容器 */}
                             <div style={{
                                 display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-end',
-                                marginBottom: '15px'
+                                flexDirection: 'column',
+                                gap: '5px',
+                                fontSize: 'clamp(0.9rem, 2vw, 1.1rem)'
                             }}>
-                                <h1 style={{ 
-                                    margin: 0,
-                                    fontSize: '2.5rem',
-                                    textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
-                                }}>
-                                    {activity.label || activity.name}
-                                </h1>
-                                <div style={{
+                                <span style={{
+                                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
                                     display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'flex-end',
-                                    gap: '5px'
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
                                 }}>
-                                    <span style={{
-                                        fontSize: '1.1rem',
-                                        textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-                                    }}>
-                                        📅 {activity.date}
-                                    </span>
-                                    <span style={{
-                                        fontSize: '1.1rem',
-                                        textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-                                    }}>
-                                        📍 {activity.location}
-                                    </span>
-                                </div>
+                                    <span>📅</span>
+                                    <span>{activity.date}</span>
+                                </span>
+                                <span style={{
+                                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <span>📍</span>
+                                    <span>{activity.location}</span>
+                                </span>
                             </div>
+                        </div>
                             {/* 互动按钮区域 */}
                             <div style={{
                                 display: 'flex',
@@ -795,9 +865,48 @@ export default function ActivityPage() {
                                     👁️ {activity.views}
                                 </span>
                                 {activityLikeButton}
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    🔄 {activity.shares}
-                                </span>
+                                <button 
+                                    onClick={handleShare}
+                                    disabled={hasShared}
+                                    style={{ 
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        padding: '6px 12px', // 减小内边距
+                                        backgroundColor: hasShared ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.3)', // 改为半透明背景
+                                        color: 'white', // 文字始终为白色
+                                        border: '1px solid rgba(255, 255, 255, 0.2)', // 添加微弱的边框
+                                        borderRadius: '4px',
+                                        cursor: hasShared ? 'default' : 'pointer',
+                                        transition: 'all 0.2s',
+                                        backdropFilter: 'blur(4px)' // 添加磨砂效果
+                                    }}
+                                >
+                                    <span>🔄</span>
+                                    <span>{activity.shares}</span>
+                                </button>
+
+                                {/* 添加分享成功提示 */}
+                                {showShareToast && (
+                                    <div style={{
+                                        position: 'fixed',
+                                        top: '20px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        padding: '10px 20px',
+                                        backgroundColor: '#28a745',
+                                        color: 'white',
+                                        borderRadius: '4px',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                        zIndex: 1000,
+                                        animation: 'fadeIn 0.3s ease-in-out'
+                                    }}>
+                                        当前页面链接已经复制到剪贴板
+                                    </div>
+                                )}
+
+
+                                
                             </div>
                         </div>
                     </>
@@ -833,83 +942,113 @@ export default function ActivityPage() {
                 </div>
             )}
 
-<div style={{
-    display: 'flex',
-    gap: '10px',
-    marginBottom: '20px',
-    padding: '12px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '8px',
-    alignItems: 'center',
-    flexWrap: 'wrap', // 在小屏幕上允许换行
-    justifyContent: 'space-between' // 两端对齐
-}}>
-    <div style={{ 
-        display: 'flex', 
-        gap: '10px',
-        alignItems: 'center',
-        flexWrap: 'wrap' // 在极小屏幕上允许换行
-    }}>
-        <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            fontSize: 'clamp(12px, 3vw, 14px)' // 响应式字体大小
-        }}>
-            <label>显示方式:</label>
-            <select
-                value={displayMode}
-                onChange={(e) => setDisplayMode(e.target.value)}
-                style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ddd',
-                    fontSize: 'inherit'
-                }}
-            >
-                {/*<option value="waterfall">瀑布流</option>瀑布流优化不好，先不加*/}
-                <option value="grid">方格图</option>
-                <option value="timeline">时间轴</option>
-            </select>
-        </div>
-        <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            fontSize: 'clamp(12px, 3vw, 14px)' // 响应式字体大小
-        }}>
-            <label>显示顺序:</label>
-            <select
-                value={sortMode}
-                onChange={(e) => setSortMode(e.target.value)}
-                style={{
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #ddd',
-                    fontSize: 'inherit'
-                }}
-            >
-                <option value="timeAsc">时间正序</option>
-                <option value="timeDesc">时间倒序</option>
-                <option value="likes">点赞榜</option>
-            </select>
-        </div>
-    </div>
-    <button 
-        onClick={() => router.push('/')}
-        style={{
-            padding: '6px 12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: 'clamp(12px, 3vw, 14px)', // 响应式字体大小
-            whiteSpace: 'nowrap' // 防止文字换行
-        }}
-    >
-        返回首页
-    </button>
+            <div style={{
+                display: 'flex',
+                gap: '10px',
+                marginBottom: '20px',
+                padding: '12px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between'
+            }}>
+            <div style={{ 
+                display: 'flex', 
+                gap: '10px',
+                alignItems: 'center',
+                flexWrap: 'wrap'
+            }}>
+                {/* 现有的显示方式选择器 */}
+                <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    fontSize: 'clamp(12px, 3vw, 14px)'
+                }}>
+                    <label>显示方式:</label>
+                    <select
+                        value={displayMode}
+                        onChange={(e) => setDisplayMode(e.target.value)}
+                        style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            fontSize: 'inherit'
+                        }}
+                    >
+                        <option value="grid">方格图</option>
+                        <option value="timeline">时间轴</option>
+                    </select>
+                </div>
+
+                {/* 添加列数选择器 */}
+                {displayMode === 'grid' && (
+                    <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        fontSize: 'clamp(12px, 3vw, 14px)'
+                    }}>
+                        <label>每行显示:</label>
+                        <select
+                            value={columnsCount}
+                            onChange={(e) => setColumnsCount(Number(e.target.value))}
+                            style={{
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                border: '1px solid #ddd',
+                                fontSize: 'inherit'
+                            }}
+                        >
+                            {[1, 2, 3, 4, 5].map(num => (
+                                <option key={num} value={num}>{num}张图片</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {/* 现有的显示顺序选择器 */}
+                <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '4px',
+                    fontSize: 'clamp(12px, 3vw, 14px)'
+                }}>
+                    <label>显示顺序:</label>
+                    <select
+                        value={sortMode}
+                        onChange={(e) => setSortMode(e.target.value)}
+                        style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            fontSize: 'inherit'
+                        }}
+                    >
+                        <option value="timeAsc">时间正序</option>
+                        <option value="timeDesc">时间倒序</option>
+                        <option value="likes">点赞榜</option>
+                    </select>
+                </div>
+                <button 
+                    onClick={() => router.push('/')}
+                    style={{
+                        padding: '0.15cm 0.3cm',
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: 'clamp(12px, 3vw, 14px)',
+                        whiteSpace: 'nowrap',
+                        marginRight: 'auto'
+                    }}
+                >
+                    返回首页
+                </button>
+            </div>
+
 </div>
     
             {/* 图片展示区域 */}
@@ -931,7 +1070,67 @@ export default function ActivityPage() {
     )}
 </div>
     
+
+        <Footbar />
             
         </div>
+
+
+        
+    );
+}
+
+function Footbar() {
+    return (
+        <footer style={{
+            marginTop: '50px',
+            paddingTop: '30px',
+            borderTop: '1px solid #eee',
+            textAlign: 'center'
+        }}>
+            <img 
+                src={config.logopath}
+                alt="Logo"
+                style={{
+                    width: '60px',
+                    height: '60px',
+                    objectFit: 'contain',
+                    marginBottom: '15px'
+                }}
+            />
+            
+            <h2 style={{
+                color: '#333',
+                marginBottom: '10px',
+                fontWeight: 'normal',
+                fontSize: '1.2rem'
+            }}>
+                © 天津大学学生电视台 版权所有
+            </h2>
+            
+            <div style={{
+                color: '#666',
+                fontSize: '14px',
+                marginTop: '5px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '5px'
+            }}>
+                <span>由HJDCZY在2024-2025寒假初次开发</span>
+                <span>imagelive 项目采用 GPL-3.0 开源协议</span>
+                <a 
+                    href="https://github.com/HJDCZY/imagelive" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        color: '#3498db',
+                        textDecoration: 'none'
+                    }}
+                >
+                    在 GitHub 上查看源代码
+                </a>
+            </div>
+        </footer>
     );
 }

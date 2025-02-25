@@ -75,3 +75,13 @@ async def seeActivity(request: Request, name: str):
     else:
         raise HTTPException(status_code=500, detail="数据库错误")
     
+@router.get("/shareActivity")
+async def shareActivity(request: Request, name: str):
+    # 增加活动分享量
+    query = "update activities set shares = shares + 1 where name = %s"
+    result = mysql_queries.query(mysql_queries.connection, query, (name,))
+    if result:
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=500, detail="数据库错误")
+    
