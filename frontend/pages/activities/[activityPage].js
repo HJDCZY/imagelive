@@ -27,6 +27,8 @@ export default function ActivityPage() {
     const [isOnline, setIsOnline] = useState(true);
     const [initialLoading, setInitialLoading] = useState(true);
     const minLoadingTime = 2000; // 最小加载时间为2秒
+    const [displayMode, setDisplayMode] = useState('grid'); // 'waterfall', 'grid', 'timeline'
+    const [sortMode, setSortMode] = useState('timeDesc'); // 'timeAsc', 'timeDesc', 'likes'
     
     // 添加是否显示新图片提示的状态
     const [newImagesCount, setNewImagesCount] = useState(0);
@@ -425,15 +427,20 @@ export default function ActivityPage() {
                 border: '1px solid #ddd',
                 borderRadius: '8px',
                 overflow: 'hidden',
-                position: 'relative'
+                position: 'relative',
+                paddingTop: '100%', // 创建正方形容器
+                backgroundColor: '#f8f9fa'
             }}
         >
             <img
                 src={`${config.backendUrl}${image.url}`}
                 alt={`活动图片 ${image.id}`}
                 style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
                     width: '100%',
-                    height: '200px',
+                    height: '100%',
                     objectFit: 'cover'
                 }}
             />
@@ -463,7 +470,7 @@ export default function ActivityPage() {
     );
 
     // 添加点赞图片的函数
-        const handleLikeImage = async (imageId) => {
+    const handleLikeImage = async (imageId) => {
         if (likedImages.has(imageId)) return; // 如果已经点赞过，直接返回
 
         try {
@@ -500,7 +507,188 @@ export default function ActivityPage() {
         }
     };
 
+    const getDisplayStyle = (mode) => {
+        switch (mode) {
+            case 'waterfall':
+                return {
+                    columnCount: 3,
+                    columnGap: '20px',
+                    '& > div': {
+                        marginBottom: '20px',
+                        breakInside: 'avoid'
+                    }
+                };
+            case 'grid':
+                return {
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                    gap: '20px'
+                };
+            case 'timeline':
+                return {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                    maxWidth: '800px',
+                    margin: '0 auto'
+                };
+            default:
+                return {};
+        }
+    };
+    
+    const getSortedImages = (images, sortMode) => {
+        const sortedImages = [...images];
+        switch (sortMode) {
+            case 'timeAsc':
+                return sortedImages.sort((a, b) => new Date(a.upload_time) - new Date(b.upload_time));
+            case 'timeDesc':
+                return sortedImages.sort((a, b) => new Date(b.upload_time) - new Date(a.upload_time));
+            case 'likes':
+                return sortedImages.sort((a, b) => b.likes - a.likes);
+            default:
+                return sortedImages;
+        }
+    };
 
+    const groupImagesByTimeSlot = (images, sortMode) => {
+        const groups = {};
+        
+        images.forEach(image => {
+            const time = new Date(image.upload_time);
+            const hour = time.getHours();
+            const minute = time.getMinutes();
+            
+            // 根据排序模式决定取整方向
+            let nextHour = hour;
+            let roundedMinute = '00';
+            
+            if (sortMode === 'timeAsc') {
+                // 时间正序时向下取整
+                if (minute > 30) {
+                    roundedMinute = '30';
+                } else {
+                    roundedMinute = '00';
+                }
+            } else {
+                // 时间倒序时向上取整
+                if (minute <= 30) {
+                    roundedMinute = '30';
+                } else {
+                    nextHour = (hour + 1) % 24;
+                    roundedMinute = '00';
+                }
+            }
+            
+            const slotKey = `${nextHour}:${roundedMinute}`;
+            
+            if (!groups[slotKey]) {
+                groups[slotKey] = [];
+            }
+            groups[slotKey].push(image);
+        });
+        
+        return groups;
+    };
+
+    // 修改时间轴显示组件
+    const TimelineSection = ({ timeSlot, images }) => {
+        const [hour, minute] = timeSlot.split(':');  
+        const displayTime = `${hour.padStart(2, '0')}:${minute}`; 
+        
+        return (
+            <div style={{
+                position: 'relative',
+                marginBottom: '40px',
+                width: '100%'
+            }}>
+                {/* 时间分隔线 */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '30px 0',
+                    width: '100%'
+                }}>
+                    <div style={{
+                        height: '1px',
+                        backgroundColor: '#e9ecef',
+                        flex: 1
+                    }}/>
+                    <span style={{
+                        padding: '0 20px',
+                        color: '#666',
+                        fontSize: '0.9rem',
+                        whiteSpace: 'nowrap'
+                    }}>
+                        ——— {displayTime} ———
+                    </span>
+                    <div style={{
+                        height: '1px',
+                        backgroundColor: '#e9ecef',
+                        flex: 1
+                    }}/>
+                </div>
+                
+                {/* 图片网格 */}
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '20px',
+                    padding: '20px',
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                    {images.map(image => (
+                        <div 
+                            key={image.id}
+                            style={{
+                                position: 'relative',
+                                paddingTop: '100%'
+                            }}
+                        >
+                            <img
+                                src={`${config.backendUrl}${image.url}`}
+                                alt={`活动图片 ${image.id}`}
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                            <button 
+                                onClick={() => handleLikeImage(image.id)}
+                                disabled={likedImages.has(image.id)}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: '10px',
+                                    right: '10px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    padding: '6px 12px',
+                                    backgroundColor: likedImages.has(image.id) ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+                                    color: likedImages.has(image.id) ? 'white' : '#212529',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: likedImages.has(image.id) ? 'default' : 'pointer',
+                                    backdropFilter: 'blur(4px)'
+                                }}
+                            >
+                                <span>❤️</span>
+                                <span>{image.likes}</span>
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
 
 
         return (
@@ -644,42 +832,106 @@ export default function ActivityPage() {
                     新增 {newImagesCount} 张图片
                 </div>
             )}
+
+<div style={{
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '20px',
+    padding: '12px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '8px',
+    alignItems: 'center',
+    flexWrap: 'wrap', // 在小屏幕上允许换行
+    justifyContent: 'space-between' // 两端对齐
+}}>
+    <div style={{ 
+        display: 'flex', 
+        gap: '10px',
+        alignItems: 'center',
+        flexWrap: 'wrap' // 在极小屏幕上允许换行
+    }}>
+        <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            fontSize: 'clamp(12px, 3vw, 14px)' // 响应式字体大小
+        }}>
+            <label>显示方式:</label>
+            <select
+                value={displayMode}
+                onChange={(e) => setDisplayMode(e.target.value)}
+                style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: 'inherit'
+                }}
+            >
+                {/*<option value="waterfall">瀑布流</option>瀑布流优化不好，先不加*/}
+                <option value="grid">方格图</option>
+                <option value="timeline">时间轴</option>
+            </select>
+        </div>
+        <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            fontSize: 'clamp(12px, 3vw, 14px)' // 响应式字体大小
+        }}>
+            <label>显示顺序:</label>
+            <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value)}
+                style={{
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    fontSize: 'inherit'
+                }}
+            >
+                <option value="timeAsc">时间正序</option>
+                <option value="timeDesc">时间倒序</option>
+                <option value="likes">点赞榜</option>
+            </select>
+        </div>
+    </div>
+    <button 
+        onClick={() => router.push('/')}
+        style={{
+            padding: '6px 12px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: 'clamp(12px, 3vw, 14px)', // 响应式字体大小
+            whiteSpace: 'nowrap' // 防止文字换行
+        }}
+    >
+        返回首页
+    </button>
+</div>
     
             {/* 图片展示区域 */}
             <div style={{
-                marginTop: '30px',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '20px'
-            }}>
-                {images.map(imageCard)}
-            </div>
+    marginTop: '30px',
+    ...getDisplayStyle(displayMode)
+}}>
+    {displayMode === 'timeline' ? (
+        Object.entries(groupImagesByTimeSlot(getSortedImages(images, sortMode), sortMode))
+            .map(([timeSlot, timeImages]) => (
+                <TimelineSection 
+                    key={timeSlot} 
+                    timeSlot={timeSlot} 
+                    images={timeImages}
+                />
+            ))
+    ) : (
+        getSortedImages(images, sortMode).map(image => imageCard(image))
+    )}
+</div>
     
-            <button 
-                onClick={() => router.push('/')}
-                style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    marginTop: '20px'
-                }}
-            >
-                返回首页
-            </button>
+            
         </div>
     );
 }
-
-
-// // 添加淡入动画样式
-// const style = document.createElement('style');
-// style.textContent = `
-//     @keyframes fadeIn {
-//         from { opacity: 0; transform: translateY(-10px); }
-//         to { opacity: 1; transform: translateY(0); }
-//     }
-// `;
-// document.head.appendChild(style);
