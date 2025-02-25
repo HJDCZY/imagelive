@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import config from '../../config';
-
+import LoadingScreen from '../../components/loadscreen';
 
 const fadeInKeyframes = `
   @keyframes fadeIn {
@@ -25,6 +25,8 @@ export default function ActivityPage() {
     const [polling, setPolling] = useState(true); // 添加轮询控制状态
     const [imageLoading, setImageLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
+    const [initialLoading, setInitialLoading] = useState(true);
+    const minLoadingTime = 2000; // 最小加载时间为2秒
     
     // 添加是否显示新图片提示的状态
     const [newImagesCount, setNewImagesCount] = useState(0);
@@ -54,6 +56,8 @@ export default function ActivityPage() {
     useEffect(() => {
         const getActivityData = async () => {
             if (!router.query.activityPage) return;
+
+            const startTime = Date.now();
             
             try {
                 // 获取封面图片
@@ -101,7 +105,14 @@ export default function ActivityPage() {
                 setError(err.message);
                 console.error('获取数据失败:', err);
             } finally {
-                setLoading(false);
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+                
+                // 使用 setTimeout 确保最小显示时间
+                setTimeout(() => {
+                    setLoading(false);
+                    setInitialLoading(false);
+                }, remainingTime);
             }
         };
 
@@ -318,17 +329,8 @@ export default function ActivityPage() {
 
 
 
-    if (loading) {
-        return (
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '100vh' 
-            }}>
-                加载中...
-            </div>
-        );
+    if (loading || initialLoading) {
+        return <LoadingScreen />;
     }
 
     if (error || !activity) {
