@@ -1,4 +1,5 @@
 import React from 'react';
+import config from '../config'
 
 const LoadingScreen = () => (
     <div style={{
@@ -14,6 +15,18 @@ const LoadingScreen = () => (
         alignItems: 'center',
         zIndex: 9999
     }}>
+        {/* 添加 Logo */}
+        <img 
+            src={config.logopath}
+            alt="Logo"
+            style={{
+                width: '100px',
+                height: '100px',
+                objectFit: 'contain',
+                marginBottom: '20px'
+            }}
+        />
+        
         <div style={{
             width: '50px',
             height: '50px',
