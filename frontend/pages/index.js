@@ -122,57 +122,64 @@ export default function Home() {
                 </p>
             )}
 
-<footer style={{
-                marginTop: '50px',
-                paddingTop: '30px',
-                borderTop: '1px solid #eee',
-                textAlign: 'center'
-            }}>
-                <img 
-                    src={config.logopath}
-                    alt="Logo"
-                    style={{
-                        width: '60px',
-                        height: '60px',
-                        objectFit: 'contain',
-                        marginBottom: '15px'
-                    }}
-                />
-                
-                <h2 style={{
-                    color: '#333',
-                    marginBottom: '10px',
-                    fontWeight: 'normal',
-                    fontSize: '1.2rem'
-                }}>
-                    © 天津大学学生电视台 版权所有
-                </h2>
-                
-                <div style={{
-                    color: '#666',
-                    fontSize: '14px',
-                    marginTop: '5px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '5px'
-                }}>
-                    <span>由HJDCZY在2024-2025寒假初次开发</span>
-                    <span>imagelive 项目采用 GPL-3.0 开源协议</span>
-                    <a 
-                        href="https://github.com/HJDCZY/imagelive" 
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                            color: '#3498db',
-                            textDecoration: 'none'
-                        }}
-                    >
-                        在 GitHub 上查看源代码
-                    </a>
-                </div>
-            </footer>  
+            <Footbar />
 
         </div>
+    );
+}
+
+
+function Footbar() {
+    return (
+        <footer style={{
+            marginTop: '50px',
+            paddingTop: '30px',
+            borderTop: '1px solid #eee',
+            textAlign: 'center'
+        }}>
+            <img 
+                src={config.logopath}
+                alt="Logo"
+                style={{
+                    width: '60px',
+                    height: '60px',
+                    objectFit: 'contain',
+                    marginBottom: '15px'
+                }}
+            />
+            
+            <h2 style={{
+                color: '#333',
+                marginBottom: '10px',
+                fontWeight: 'normal',
+                fontSize: '1.2rem'
+            }}>
+                © 天津大学学生电视台 版权所有
+            </h2>
+            
+            <div style={{
+                color: '#666',
+                fontSize: '14px',
+                marginTop: '5px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '5px'
+            }}>
+                <span>由HJDCZY在2024-2025寒假初次开发</span>
+                <span>imagelive 项目采用 GPL-3.0 开源协议</span>
+                <a 
+                    href="https://github.com/HJDCZY/imagelive" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        color: '#3498db',
+                        textDecoration: 'none'
+                    }}
+                >
+                    在 GitHub 上查看源代码
+                </a>
+            </div>
+        </footer>
     );
 }
