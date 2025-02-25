@@ -1069,14 +1069,9 @@ export default function ActivityPage() {
         getSortedImages(images, sortMode).map(image => imageCard(image))
     )}
 </div>
-    
-
         <Footbar />
             
         </div>
-
-
-        
     );
 }
 
