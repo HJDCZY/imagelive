@@ -52,10 +52,10 @@ async def upload_images(
                             result = mysql_queries.query(mysql_queries.connection, query)
                             photo_id = result[0][0]
                             
-                            # 3. 保存文件
+                            # 3. 保存文件（使用小写扩展名）
                             file_path = os.path.join(
                                 config['imagefolder'], 
-                                f"{photo_id}{ext}"
+                                f"{photo_id}{ext}"  # ext 已经是小写的
                             )
                             with open(file_path, "wb") as f:
                                 f.write(contents)

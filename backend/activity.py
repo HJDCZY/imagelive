@@ -102,8 +102,8 @@ async def add_activity(
                     if result:
                         # 如果有上传封面图片，保存图片
                         if cover:
-                            # 获取文件扩展名
-                            file_extension = os.path.splitext(cover.filename)[1]
+                            # 获取文件扩展名并转换为小写
+                            file_extension = os.path.splitext(cover.filename)[1].lower()
                             # 使用活动名称作为文件名，'headimagefolder'
                             file_path = os.path.join(config['headimagefolder'], f"{name}{file_extension}")
                             
