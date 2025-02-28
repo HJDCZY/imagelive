@@ -27,7 +27,8 @@ async def frontgetactivity(request: Request, name: str):
     if result:
         return result
     elif result == []:
-        return []
+        # 404
+        raise HTTPException(status_code=404, detail="活动不存在")
     else:
         raise HTTPException(status_code=500, detail="数据库错误")
 

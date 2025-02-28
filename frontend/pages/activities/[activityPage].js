@@ -66,16 +66,6 @@ export default function ActivityPage() {
             const startTime = Date.now();
             
             try {
-                // 获取封面图片
-                const coverResponse = await fetchWithRetry(
-                    `${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`,
-                    { method: 'GET' }
-                ).catch(() => null); // 如果获取封面失败，不影响其他功能
-
-                if (coverResponse?.ok) {
-                    setCoverImage(`${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`);
-                }
-
                 // 获取活动信息
                 const [activityResponse, imagesResponse] = await Promise.all([
                     fetchWithRetry(
@@ -88,18 +78,48 @@ export default function ActivityPage() {
                     )
                 ]);
 
+
+                // 获取封面图片
+                const coverResponse = await fetchWithRetry(
+                    `${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`,
+                    { method: 'GET' }
+                ).catch(() => null); // 如果获取封面失败，不影响其他功能
+
+                if (coverResponse?.ok) {
+                    setCoverImage(`${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`);
+                }
+
+                
+
                 // 处理活动数据
                 const activityData = await activityResponse.json();
-                const formattedActivity = {
-                    name: activityData[0][0],
-                    label: activityData[0][1],
-                    date: activityData[0][2],
-                    views: activityData[0][3],
-                    likes: activityData[0][4],
-                    shares: activityData[0][5],
-                    location: activityData[0][6]
-                };
-                setActivity(formattedActivity);
+                //检查后端的返回，frontgetactivity是否为404
+                console.log(activityData);
+                console.log(activityResponse.ok);
+                if (!activityResponse.ok || !activityData || !Array.isArray(activityData) || activityData.length === 0 || !activityData[0]) {
+                    setError('404-活动不存在');
+                    setLoading(false);
+                    setInitialLoading(false);
+                    return;
+                }
+
+                try {
+                    const formattedActivity = {
+                        name: activityData[0][0],
+                        label: activityData[0][1],
+                        date: activityData[0][2],
+                        views: activityData[0][3],
+                        likes: activityData[0][4],
+                        shares: activityData[0][5],
+                        location: activityData[0][6]
+                    };
+                    setActivity(formattedActivity);
+                } catch (err) {
+                    setError('404-活动不存在');
+                    setLoading(false);
+                    setInitialLoading(false);
+                    return;
+                }
 
                 // 处理图片数据
                 const imagesData = await imagesResponse.json();
@@ -163,70 +183,70 @@ export default function ActivityPage() {
         }
     }, [router.query.activityPage, activity, viewUpdated]); // 添加 viewUpdated 到依赖数组
 
-    useEffect(() => {
-        const getActivityData = async () => {
-            if (!router.query.activityPage) return;
-            try {
-                // 获取活动基本信息
-                const activityResponse = await fetch(
-                    `${config.backendUrl}/frontgetactivity/${router.query.activityPage}`,
-                    {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        }
-                    }
-                );
+    // useEffect(() => {
+    //     const getActivityData = async () => {
+    //         if (!router.query.activityPage) return;
+    //         try {
+    //             // 获取活动基本信息
+    //             const activityResponse = await fetch(
+    //                 `${config.backendUrl}/frontgetactivity/${router.query.activityPage}`,
+    //                 {
+    //                     method: 'GET',
+    //                     credentials: 'include',
+    //                     headers: {
+    //                         'Accept': 'application/json',
+    //                         'Content-Type': 'application/json',
+    //                     }
+    //                 }
+    //             );
 
-                if (!activityResponse.ok) {
-                    throw new Error('获取活动信息失败');
-                }
+    //             if (!activityResponse.ok) {
+    //                 throw new Error('获取活动信息失败');
+    //             }
 
-                const activityData = await activityResponse.json();
-                const formattedActivity = {
-                    name: activityData[0][0],
-                    label: activityData[0][1],
-                    date: activityData[0][2],
-                    views: activityData[0][3],
-                    likes: activityData[0][4],
-                    shares: activityData[0][5],
-                    location: activityData[0][6] 
-                };
-                setActivity(formattedActivity);
+    //             const activityData = await activityResponse.json();
+    //             const formattedActivity = {
+    //                 name: activityData[0][0],
+    //                 label: activityData[0][1],
+    //                 date: activityData[0][2],
+    //                 views: activityData[0][3],
+    //                 likes: activityData[0][4],
+    //                 shares: activityData[0][5],
+    //                 location: activityData[0][6] 
+    //             };
+    //             setActivity(formattedActivity);
 
-                // 获取活动图片
-                const imagesResponse = await fetch(
-                    `${config.backendUrl}/getImagesFrontend/${router.query.activityPage}`,
-                    {
-                        method: 'GET',
-                        credentials: 'include',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json',
-                        }
-                    }
-                );
+    //             // 获取活动图片
+    //             const imagesResponse = await fetch(
+    //                 `${config.backendUrl}/getImagesFrontend/${router.query.activityPage}`,
+    //                 {
+    //                     method: 'GET',
+    //                     credentials: 'include',
+    //                     headers: {
+    //                         'Accept': 'application/json',
+    //                         'Content-Type': 'application/json',
+    //                     }
+    //                 }
+    //             );
 
-                if (!imagesResponse.ok) {
-                    throw new Error('获取图片失败');
-                }
+    //             if (!imagesResponse.ok) {
+    //                 throw new Error('获取图片失败');
+    //             }
 
-                const imagesData = await imagesResponse.json();
-                if (imagesData.success) {
-                    setImages(imagesData.images);
-                }
-            } catch (err) {
-                setError(err.message);
-                console.error('获取数据失败:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
+    //             const imagesData = await imagesResponse.json();
+    //             if (imagesData.success) {
+    //                 setImages(imagesData.images);
+    //             }
+    //         } catch (err) {
+    //             setError(err.message);
+    //             console.error('获取数据失败:', err);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
 
-        getActivityData();
-    }, [router.query.activityPage]);
+    //     getActivityData();
+    // }, [router.query.activityPage]);
 
 
     // 添加轮询效果
@@ -383,20 +403,37 @@ export default function ActivityPage() {
                 flexDirection: 'column',
                 justifyContent: 'center', 
                 alignItems: 'center', 
-                height: '100vh' 
+                height: '100vh',
+                backgroundColor: '#f8f9fa'
             }}>
-                <h1>{error || '活动不存在'}</h1>
+                <h1 style={{
+                    fontSize: '2.5rem',
+                    color: '#343a40',
+                    marginBottom: '1rem'
+                }}>
+                    404 - Not Found
+                </h1>
+                <p style={{
+                    fontSize: '1.2rem',
+                    color: '#6c757d',
+                    marginBottom: '2rem'
+                }}>
+                    {error || '活动不存在'}
+                </p>
                 <button 
                     onClick={() => router.push('/')}
                     style={{
-                        padding: '10px 20px',
+                        padding: '12px 24px',
                         backgroundColor: '#007bff',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
                         cursor: 'pointer',
-                        marginTop: '20px'
+                        fontSize: '1rem',
+                        transition: 'background-color 0.2s'
                     }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
                 >
                     返回首页
                 </button>
@@ -749,7 +786,7 @@ export default function ActivityPage() {
     };
 
 
-        return (
+    return (
         <div style={{ 
             padding: '0',
             maxWidth: '1200px', 
