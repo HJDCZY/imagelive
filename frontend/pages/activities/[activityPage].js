@@ -2,6 +2,8 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import config from '../../config';
 import LoadingScreen from '../../components/loadscreen';
+import Icon from '@mdi/react';
+import { mdiCalendarMonth,mdiMapMarker,mdiThumbUp,mdiEye,mdiShare,mdiThumbUpOutline,mdiShareOutline } from '@mdi/js';
 
 const fadeInKeyframes = `
   @keyframes fadeIn {
@@ -446,17 +448,17 @@ export default function ActivityPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                padding: '6px 12px', // 减小内边距
-                backgroundColor: likedActivity ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.3)', // 改为半透明背景
-                color: 'white', // 文字始终为白色
-                border: '1px solid rgba(255, 255, 255, 0.2)', // 添加微弱的边框
+                padding: '6px 12px',
+                backgroundColor: likedActivity ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.3)',
+                color: 'white',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '4px',
                 cursor: likedActivity ? 'default' : 'pointer',
                 transition: 'all 0.2s',
-                backdropFilter: 'blur(4px)' // 添加磨砂效果
+                backdropFilter: 'blur(4px)'
             }}
         >
-            <span>❤️</span>
+            <Icon path={likedActivity ? mdiThumbUp : mdiThumbUpOutline} size={0.7} /> 
             <span>{activity.likes}</span>
         </button>
     );
@@ -505,7 +507,7 @@ export default function ActivityPage() {
                     fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' // 响应式字体大小
                 }}
             >
-                <span style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>❤️</span>
+                <Icon path={likedImages.has(image.id) ? mdiThumbUp : mdiThumbUpOutline} size={0.6} />
                 <span>{image.likes}</span>
             </button>
         </div>
@@ -736,7 +738,7 @@ export default function ActivityPage() {
                                     fontSize: 'clamp(0.75rem, 2vw, 0.875rem)'
                                 }}
                             >
-                                <span style={{ fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' }}>❤️</span>
+                                <Icon path={likedImages.has(image.id) ? mdiThumbUp : mdiThumbUpOutline} size={0.6} />
                                 <span>{image.likes}</span>
                             </button>
                         </div>
@@ -841,7 +843,7 @@ export default function ActivityPage() {
                                     alignItems: 'center',
                                     gap: '0.5rem'
                                 }}>
-                                    <span>📅</span>
+                                    <Icon path={mdiCalendarMonth} size={1} />
                                     <span>{activity.date}</span>
                                 </span>
                                 <span style={{
@@ -850,7 +852,7 @@ export default function ActivityPage() {
                                     alignItems: 'center',
                                     gap: '0.5rem'
                                 }}>
-                                    <span>📍</span>
+                                    <Icon path={mdiMapMarker} size={1} />
                                     <span>{activity.location}</span>
                                 </span>
                             </div>
@@ -862,7 +864,7 @@ export default function ActivityPage() {
                                 alignItems: 'center'
                             }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    👁️ {activity.views}
+                                <Icon path={mdiEye} size={0.7} />  {activity.views}
                                 </span>
                                 {activityLikeButton}
                                 <button 
@@ -882,7 +884,7 @@ export default function ActivityPage() {
                                         backdropFilter: 'blur(4px)' // 添加磨砂效果
                                     }}
                                 >
-                                    <span>🔄</span>
+                                    <Icon path={hasShared ? mdiShare : mdiShareOutline} size={0.7} />
                                     <span>{activity.shares}</span>
                                 </button>
 

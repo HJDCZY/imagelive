@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';  // 添加路由导入
 import config from '../config';
+import Icon from '@mdi/react';
+import { mdiCalendarMonth,mdiMapMarker,mdiThumbUp,mdiEye,mdiShare } from '@mdi/js';
 
 
 export default function Home() {
@@ -94,23 +96,41 @@ export default function Home() {
                         <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                             <h2 style={{ margin: '0 0 15px 0', fontSize: '1.5rem' }}>{activity.label || activity.name}</h2>
                             <div style={{ flex: 1 }}>
-                                <p style={{ margin: '5px 0', color: '#666' }}>
-                                    📅 {activity.date}
+                                <p style={{ 
+                                    margin: '5px 0', 
+                                    color: '#666',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'  // 添加图标和文字之间的间距
+                                }}>
+                                    <Icon path={mdiCalendarMonth} size={1} /> {activity.date}
                                 </p>
-                                <p style={{ margin: '5px 0', color: '#666' }}>
-                                    📍 {activity.location}
+                                <p style={{ 
+                                    margin: '5px 0', 
+                                    color: '#666',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'  // 添加图标和文字之间的间距
+                                }}>
+                                    <Icon path={mdiMapMarker} size={1} /> {activity.location}
                                 </p>
                             </div>
-                            <div style={{ 
+                             <div style={{ 
                                 display: 'flex', 
                                 justifyContent: 'space-between',
                                 borderTop: '1px solid #eee',
                                 paddingTop: '15px',
                                 marginTop: 'auto'
                             }}>
-                                <span>👁️ {activity.views}</span>
-                                <span>❤️ {activity.likes}</span>
-                                <span>🔄 {activity.shares}</span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Icon path={mdiThumbUp} size={1} /> {activity.views}
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Icon path={mdiEye} size={1} /> {activity.likes}
+                                </span>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Icon path={mdiShare} size={1} /> {activity.shares}
+                                </span>
                             </div>
                         </div>
                     </div>
