@@ -7,6 +7,7 @@ import imageupload
 import imagedownload
 import imagemanage
 import index
+import facescan
 
 
 app = FastAPI()
@@ -18,6 +19,7 @@ app.include_router(imageupload.router)
 app.include_router(imagedownload.router)
 app.include_router(imagemanage.router)
 app.include_router(index.router)
+app.include_router(facescan.router)
 
 #修改CORS，允许所有的请求
 from fastapi.middleware.cors import CORSMiddleware

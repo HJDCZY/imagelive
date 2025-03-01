@@ -183,72 +183,6 @@ export default function ActivityPage() {
         }
     }, [router.query.activityPage, activity, viewUpdated]); // 添加 viewUpdated 到依赖数组
 
-    // useEffect(() => {
-    //     const getActivityData = async () => {
-    //         if (!router.query.activityPage) return;
-    //         try {
-    //             // 获取活动基本信息
-    //             const activityResponse = await fetch(
-    //                 `${config.backendUrl}/frontgetactivity/${router.query.activityPage}`,
-    //                 {
-    //                     method: 'GET',
-    //                     credentials: 'include',
-    //                     headers: {
-    //                         'Accept': 'application/json',
-    //                         'Content-Type': 'application/json',
-    //                     }
-    //                 }
-    //             );
-
-    //             if (!activityResponse.ok) {
-    //                 throw new Error('获取活动信息失败');
-    //             }
-
-    //             const activityData = await activityResponse.json();
-    //             const formattedActivity = {
-    //                 name: activityData[0][0],
-    //                 label: activityData[0][1],
-    //                 date: activityData[0][2],
-    //                 views: activityData[0][3],
-    //                 likes: activityData[0][4],
-    //                 shares: activityData[0][5],
-    //                 location: activityData[0][6] 
-    //             };
-    //             setActivity(formattedActivity);
-
-    //             // 获取活动图片
-    //             const imagesResponse = await fetch(
-    //                 `${config.backendUrl}/getImagesFrontend/${router.query.activityPage}`,
-    //                 {
-    //                     method: 'GET',
-    //                     credentials: 'include',
-    //                     headers: {
-    //                         'Accept': 'application/json',
-    //                         'Content-Type': 'application/json',
-    //                     }
-    //                 }
-    //             );
-
-    //             if (!imagesResponse.ok) {
-    //                 throw new Error('获取图片失败');
-    //             }
-
-    //             const imagesData = await imagesResponse.json();
-    //             if (imagesData.success) {
-    //                 setImages(imagesData.images);
-    //             }
-    //         } catch (err) {
-    //             setError(err.message);
-    //             console.error('获取数据失败:', err);
-    //         } finally {
-    //             setLoading(false);
-    //         }
-    //     };
-
-    //     getActivityData();
-    // }, [router.query.activityPage]);
-
-
     // 添加轮询效果
     // 修改轮询逻辑，添加网络状态检查
     useEffect(() => {
@@ -393,7 +327,7 @@ export default function ActivityPage() {
 
 
     if (loading || initialLoading) {
-        return <LoadingScreen />;
+        return <LoadingScreen message="正在加载活动照片..." />;
     }
 
     if (error || !activity) {
@@ -1070,6 +1004,21 @@ export default function ActivityPage() {
                         <option value="likes">点赞榜</option>
                     </select>
                 </div>
+                <button 
+                    onClick={() => router.push(`/activities/facecompare?activity=${router.query.activityPage}`)}
+                    style={{
+                        padding: '0.15cm 0.3cm',
+                        backgroundColor: '#28a745', // 使用绿色以区分
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: 'clamp(12px, 3vw, 14px)',
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    找我自己
+                </button>
                 <button 
                     onClick={() => router.push('/')}
                     style={{

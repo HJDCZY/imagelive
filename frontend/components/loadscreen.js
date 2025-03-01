@@ -1,7 +1,7 @@
 import React from 'react';
 import config from '../config'
 
-const LoadingScreen = () => (
+const LoadingScreen = ({ message }) => (  // 使用解构赋值获取 message 属性
     <div style={{
         position: 'fixed',
         top: 0,
@@ -15,7 +15,6 @@ const LoadingScreen = () => (
         alignItems: 'center',
         zIndex: 9999
     }}>
-        {/* 添加 Logo */}
         <img 
             src={config.logopath}
             alt="Logo"
@@ -36,6 +35,17 @@ const LoadingScreen = () => (
             animation: 'spin 1s linear infinite',
             marginBottom: '20px'
         }} />
+
+        {message && (
+            <h1 style={{
+                color: '#333',
+                marginBottom: '10px',
+                fontWeight: 'normal',
+                textAlign: 'center'
+            }}>
+                {message}
+            </h1>
+        )}
         
         <h2 style={{
             color: '#333',
@@ -56,7 +66,7 @@ const LoadingScreen = () => (
             alignItems: 'center',
             gap: '5px'
         }}>
-            <span> 由HJDCZY在2024-2025寒假初次开发</span>
+            <span>由HJDCZY在2024-2025寒假初次开发</span>
             <span>imagelive 项目采用 GPL-3.0 开源协议</span>
             <a 
                 href="https://github.com/HJDCZY/imagelive" 

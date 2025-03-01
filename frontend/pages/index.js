@@ -123,10 +123,10 @@ export default function Home() {
                                 marginTop: 'auto'
                             }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <Icon path={mdiThumbUp} size={1} /> {activity.views}
+                                    <Icon path={mdiEye} size={1} /> {activity.views}
                                 </span>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <Icon path={mdiEye} size={1} /> {activity.likes}
+                                    <Icon path={mdiThumbUp} size={1} /> {activity.likes}
                                 </span>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                     <Icon path={mdiShare} size={1} /> {activity.shares}

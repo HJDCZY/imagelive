@@ -175,3 +175,4 @@ node_modules
 #保留data目录的文件夹结构，但是忽略所有文件
 
 imagelive.tar
+*.tar
