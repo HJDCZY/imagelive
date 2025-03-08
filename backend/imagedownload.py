@@ -42,9 +42,9 @@ async def get_images_backend(request: Request):
                         
                         file_url = None
                         if os.path.exists(jpg_path):
-                            file_url = f"/image/{photo_id}"
+                            file_url = f"/thumbnail/{photo_id}"
                         elif os.path.exists(png_path):
-                            file_url = f"/image/{photo_id}"
+                            file_url = f"/thumbnail/{photo_id}"
                         
                         if file_url:
                             images.append({
@@ -86,9 +86,9 @@ async def get_images_frontend(selectedActivity: str):
             
             file_url = None
             if os.path.exists(jpg_path):
-                file_url = f"/image/{photo_id}"
+                file_url = f"/thumbnail/{photo_id}"
             elif os.path.exists(png_path):
-                file_url = f"/image/{photo_id}"
+                file_url = f"/thumbnail/{photo_id}"
             
             if file_url:
                 images.append({
@@ -123,6 +123,44 @@ async def get_image(photo_id: str):
         return FileResponse(png_path)
     raise HTTPException(status_code=404, detail="图片不存在")
 
+@router.get("/imagedownload/{photo_id}")
+async def get_image(photo_id: str):
+    # 如果photo_id已经包含扩展名，先移除它
+    photo_id = photo_id.split('.')[0]  # 移除可能存在的扩展名
+    
+    # 返回图片
+    jpg_path = os.path.join(config['imagefolder'], f"{photo_id}.jpg")
+    png_path = os.path.join(config['imagefolder'], f"{photo_id}.png")
+    
+    if os.path.exists(jpg_path):
+        return FileResponse(
+            jpg_path,
+            headers={
+                "Content-Disposition": f'attachment; filename="{photo_id}.jpg"'
+            }
+        )
+    elif os.path.exists(png_path):
+        return FileResponse(
+            png_path,
+            headers={
+                "Content-Disposition": f'attachment; filename="{photo_id}.png"'
+            }
+        )
+    raise HTTPException(status_code=404, detail="图片不存在")
+
+
+@router.get("/thumbnail/{photo_id}")
+async def get_thumbnail(photo_id: str):
+    # 如果photo_id已经包含扩展名，先移除它
+    photo_id = photo_id.split('.')[0]
+
+    # 返回缩略图
+    thumb_path = os.path.join(config['thumbnailfolder'], f"{photo_id}.webp")
+    if os.path.exists(thumb_path):
+        return FileResponse(thumb_path)
+    raise HTTPException(status_code=404, detail="缩略图不存在")
+
+
 
 @router.get("/getCoverImage")
 async def get_cover_image(request: Request):
@@ -138,3 +176,20 @@ async def get_cover_image(request: Request):
     elif os.path.exists(png_path):
         return FileResponse(png_path)
     raise HTTPException(status_code=404, detail="图片不存在")
+
+@router.get("/getImagesize")
+async def get_imagesize(request: Request):
+    # 提取请求体当中的imageId
+    image_id = request.query_params.get("imageId")
+    # 直接去'imagefolder'文件夹下找imageId.png或者imageId.jpg
+    # 如果找到就返回以kb为单位的大小，找不到就返回404
+    jpg_path = os.path.join(config['imagefolder'], f"{image_id}.jpg")
+    png_path = os.path.join(config['imagefolder'], f"{image_id}.png")
+    if os.path.exists(jpg_path):
+        size = os.path.getsize(jpg_path) / 1024
+        return {"size": size}
+    elif os.path.exists(png_path):
+        size = os.path.getsize(png_path) / 1024
+        return {"size": size}
+    raise HTTPException(status_code=404, detail="图片不存在")
+

@@ -7,8 +7,9 @@
     "react-dom": "^19.0.0",
     "whatwg-fetch": "^3.6.20"
   },
+  "type": "module",
   "scripts": {
-    "dev": "node server.js",
+    "dev": "node server.js NODE_ENV=development",
     "build": "next build",
     "start": "NODE_ENV=production node server.js"
   }

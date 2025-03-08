@@ -150,22 +150,33 @@ async def delete_activity(request: Request):
                 query = "SELECT id FROM photos WHERE activity_name = %s"
                 try:
                     result = mysql_queries.query(mysql_queries.connection, query, (name,))
-                    if result:#如果有照片需要删除
+                    if result:  # 如果有照片需要删除
                         for photo in result:
                             photo_id = str(photo[0])
+                            # 原图文件路径列表
                             file_paths = [
                                 os.path.join(config['imagefolder'], photo_id + ext)
                                 for ext in ['.png', '.jpg']
                             ]
                             
+                            # 添加缩略图路径
+                            thumb_path = os.path.join(config['thumbnailfolder'], f"{photo_id}.webp")
+                            
+                            # 删除原图
                             for path in file_paths:
                                 if os.path.exists(path):
                                     try:
                                         os.remove(path)
-                                        break  # 找到并删除文件后就跳出内层循环
                                     except Exception as e:
                                         print(f"删除文件 {path} 失败: {str(e)}")
-                                        continue  # 继续尝试其他扩展名的文件
+                            
+                            # 删除缩略图
+                            try:
+                                if os.path.exists(thumb_path):
+                                    os.remove(thumb_path)
+                            except Exception as e:
+                                print(f"删除缩略图 {thumb_path} 失败: {str(e)}")
+                            
                 except Exception as e:
                     raise HTTPException(status_code=400, detail=f"删除照片失败: {str(e)}")
                 

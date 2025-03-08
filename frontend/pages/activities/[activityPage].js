@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import config from '../../config';
 import LoadingScreen from '../../components/loadscreen';
-import Icon from '@mdi/react';
+import {Icon} from '@mdi/react';
 import { mdiCalendarMonth,mdiMapMarker,mdiThumbUp,mdiEye,mdiShare,mdiThumbUpOutline,mdiShareOutline } from '@mdi/js';
 
 const fadeInKeyframes = `
@@ -26,13 +26,16 @@ export default function ActivityPage() {
     const [polling, setPolling] = useState(true); // 添加轮询控制状态
     const [imageLoading, setImageLoading] = useState(true);
     const [isOnline, setIsOnline] = useState(true);
-    const [initialLoading, setInitialLoading] = useState(true);
+    const { loadScreen } = router.query;
+    const [initialLoading, setInitialLoading] = useState(loadScreen !== 'false');
     const minLoadingTime = 2000; // 最小加载时间为2秒
     const [displayMode, setDisplayMode] = useState('grid'); // 'waterfall', 'grid', 'timeline'
     const [sortMode, setSortMode] = useState('timeDesc'); // 'timeAsc', 'timeDesc', 'likes'
     const [columnsCount, setColumnsCount] = useState(3); // 默认每行3张图片
     const [showShareToast, setShowShareToast] = useState(false);
     const [hasShared, setHasShared] = useState(false);
+
+
     
     // 添加是否显示新图片提示的状态
     const [newImagesCount, setNewImagesCount] = useState(0);
@@ -59,10 +62,11 @@ export default function ActivityPage() {
         };
     }, [router.query.activityPage]);
 
+        // 修改 getActivityData 函数中的相关部分
     useEffect(() => {
         const getActivityData = async () => {
             if (!router.query.activityPage) return;
-
+    
             const startTime = Date.now();
             
             try {
@@ -77,33 +81,26 @@ export default function ActivityPage() {
                         { method: 'GET' }
                     )
                 ]);
-
-
-                // 获取封面图片
-                const coverResponse = await fetchWithRetry(
-                    `${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`,
-                    { method: 'GET' }
-                ).catch(() => null); // 如果获取封面失败，不影响其他功能
-
-                if (coverResponse?.ok) {
-                    setCoverImage(`${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`);
-                }
-
-                
-
-                // 处理活动数据
-                const activityData = await activityResponse.json();
-                //检查后端的返回，frontgetactivity是否为404
-                console.log(activityData);
-                console.log(activityResponse.ok);
-                if (!activityResponse.ok || !activityData || !Array.isArray(activityData) || activityData.length === 0 || !activityData[0]) {
+    
+                // 检查响应是否为 null
+                if (!activityResponse || !imagesResponse) {
                     setError('404-活动不存在');
                     setLoading(false);
                     setInitialLoading(false);
                     return;
                 }
-
+    
+                // 处理活动数据
                 try {
+                    const activityData = await activityResponse.json();
+                    
+                    if (!activityData || !Array.isArray(activityData) || activityData.length === 0 || !activityData[0]) {
+                        setError('404-活动不存在');
+                        setLoading(false);
+                        setInitialLoading(false);
+                        return;
+                    }
+    
                     const formattedActivity = {
                         name: activityData[0][0],
                         label: activityData[0][1],
@@ -114,34 +111,53 @@ export default function ActivityPage() {
                         location: activityData[0][6]
                     };
                     setActivity(formattedActivity);
+    
+                    // 处理图片数据
+                    const imagesData = await imagesResponse.json();
+                    if (imagesData.success) {
+                        setImages(imagesData.images);
+                    }
                 } catch (err) {
                     setError('404-活动不存在');
                     setLoading(false);
                     setInitialLoading(false);
                     return;
                 }
-
-                // 处理图片数据
-                const imagesData = await imagesResponse.json();
-                if (imagesData.success) {
-                    setImages(imagesData.images);
+    
+                // 获取封面图片
+                try {
+                    const coverResponse = await fetchWithRetry(
+                        `${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`,
+                        { method: 'GET' }
+                    );
+                    
+                    if (coverResponse?.ok) {
+                        setCoverImage(`${config.backendUrl}/getCoverImage?selectedActivity=${router.query.activityPage}`);
+                    }
+                } catch (err) {
+                    // 封面获取失败不影响主要功能
+                    console.error('封面获取失败:', err);
                 }
-
+    
             } catch (err) {
-                setError(err.message);
+                setError('404-网络连接失败，请检查网络设置');
                 console.error('获取数据失败:', err);
             } finally {
                 const elapsedTime = Date.now() - startTime;
-                const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
                 
-                // 使用 setTimeout 确保最小显示时间
-                setTimeout(() => {
+                if (loadScreen === 'false') {
                     setLoading(false);
                     setInitialLoading(false);
-                }, remainingTime);
+                } else {
+                    const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+                    setTimeout(() => {
+                        setLoading(false);
+                        setInitialLoading(false);
+                    }, remainingTime);
+                }
             }
         };
-
+    
         if (router.query.activityPage) {
             getActivityData();
         }
@@ -217,7 +233,7 @@ export default function ActivityPage() {
         };
     }, []);
 
-    const fetchWithRetry = async (url, options, maxRetries = 3) => {
+        const fetchWithRetry = async (url, options, maxRetries = 3) => {
         const timeout = 10000; // 10秒超时
         
         for (let i = 0; i < maxRetries; i++) {
@@ -236,24 +252,41 @@ export default function ActivityPage() {
                         'Pragma': 'no-cache',
                         ...(options.headers || {})
                     },
-                    keepalive: true // 保持连接活跃
+                    keepalive: true
                 });
                 
                 clearTimeout(timeoutId);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    // 修改这里，不再抛出异常，而是显示404页面
+                    if (response.status === 404) {
+                        setError('404-资源不存在');
+                        setLoading(false);
+                        setInitialLoading(false);
+                        return null;
+                    } else {
+                        setError(`404-服务器错误 (${response.status})`);
+                        setLoading(false);
+                        setInitialLoading(false);
+                        return null;
+                    }
                 }
                 
                 return response;
             } catch (error) {
                 const isLastAttempt = i === maxRetries - 1;
                 const isTimeout = error.name === 'AbortError';
-                const waitTime = Math.min(1000 * Math.pow(2, i), 8000); // 指数退避，最大等待8秒
+                const waitTime = Math.min(1000 * Math.pow(2, i), 8000);
                 
                 console.error(`请求失败 (${i + 1}/${maxRetries}):`, error.message);
                 
-                if (isLastAttempt) throw error;
+                if (isLastAttempt) {
+                    // 最后一次尝试失败时，显示404页面而不是抛出异常
+                    setError('404-网络连接失败，请检查网络设置');
+                    setLoading(false);
+                    setInitialLoading(false);
+                    return null;
+                }
                 if (!isTimeout) await new Promise(resolve => setTimeout(resolve, waitTime));
             }
         }
@@ -326,53 +359,66 @@ export default function ActivityPage() {
     };
 
 
+    // 修改加载判断逻辑
     if (loading || initialLoading) {
-        return <LoadingScreen message="正在加载活动照片..." />;
+        // 在完全没有数据时显示加载屏幕，即使 loadScreen=false
+        if (!activity && !error) {
+            return <LoadingScreen message="正在加载活动照片..." />;
+        }
+        // 如果有数据但 loadScreen !== 'false'，继续显示加载屏幕
+        if (loadScreen !== 'false') {
+            return <LoadingScreen message="正在加载活动照片..." />;
+        }
     }
 
     if (error || !activity) {
-        return (
-            <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                height: '100vh',
-                backgroundColor: '#f8f9fa'
-            }}>
-                <h1 style={{
-                    fontSize: '2.5rem',
-                    color: '#343a40',
-                    marginBottom: '1rem'
+        // 只有在确实发生错误时才显示404页面
+        if (error) {
+            return (
+                <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    height: '100vh',
+                    backgroundColor: '#f8f9fa'
                 }}>
-                    404 - Not Found
-                </h1>
-                <p style={{
-                    fontSize: '1.2rem',
-                    color: '#6c757d',
-                    marginBottom: '2rem'
-                }}>
-                    {error || '活动不存在'}
-                </p>
-                <button 
-                    onClick={() => router.push('/')}
-                    style={{
-                        padding: '12px 24px',
-                        backgroundColor: '#007bff',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '1rem',
-                        transition: 'background-color 0.2s'
-                    }}
-                    onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
-                    onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
-                >
-                    返回首页
-                </button>
-            </div>
-        );
+                    <h1 style={{
+                        fontSize: '2.5rem',
+                        color: '#343a40',
+                        marginBottom: '1rem'
+                    }}>
+                        404 - Not Found
+                    </h1>
+                    <p style={{
+                        fontSize: '1.2rem',
+                        color: '#6c757d',
+                        marginBottom: '2rem'
+                    }}>
+                        {error}
+                    </p>
+                    <button 
+                        onClick={() => router.push('/')}
+                        style={{
+                            padding: '12px 24px',
+                            backgroundColor: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '1rem',
+                            transition: 'background-color 0.2s'
+                        }}
+                        onMouseOver={(e) => e.target.style.backgroundColor = '#0056b3'}
+                        onMouseOut={(e) => e.target.style.backgroundColor = '#007bff'}
+                    >
+                        返回首页
+                    </button>
+                </div>
+            );
+        }
+        // 如果只是数据未加载完成，显示加载屏幕
+        return <LoadingScreen message="正在加载活动照片..." />;
     }
 
     // 添加点赞活动的函数
@@ -443,12 +489,14 @@ export default function ActivityPage() {
                 overflow: 'hidden',
                 position: 'relative',
                 paddingTop: '100%',
-                backgroundColor: '#f8f9fa'
+                backgroundColor: '#f8f9fa',
+                cursor: 'pointer' // 添加鼠标指针样式
             }}
         >
             <img
                 src={`${config.backendUrl}${image.url}`}
                 alt={`活动图片 ${image.id}`}
+                onClick={() => router.push(`/imageview?activity=${router.query.activityPage}&imageId=${image.id}`)}
                 style={{
                     position: 'absolute',
                     top: 0,
@@ -459,7 +507,10 @@ export default function ActivityPage() {
                 }}
             />
             <button 
-                onClick={() => handleLikeImage(image.id)}
+                onClick={(e) => {
+                    e.stopPropagation(); // 阻止事件冒泡，避免触发图片点击
+                    handleLikeImage(image.id);
+                }}
                 disabled={likedImages.has(image.id)}
                 style={{
                     position: 'absolute',
@@ -475,7 +526,7 @@ export default function ActivityPage() {
                     borderRadius: '0.25rem',
                     cursor: likedImages.has(image.id) ? 'default' : 'pointer',
                     backdropFilter: 'blur(4px)',
-                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)' // 响应式字体大小
+                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)'
                 }}
             >
                 <Icon path={likedImages.has(image.id) ? mdiThumbUp : mdiThumbUpOutline} size={0.6} />
@@ -668,52 +719,42 @@ export default function ActivityPage() {
                     padding: '0.125rem'
                 }
                 }}>
-                    {images.map(image => (
-                        <div 
-                            key={image.id}
+                   {images.map(image => (
+                    <div 
+                        key={image.id}
+                        style={{
+                            position: 'relative',
+                            paddingTop: '100%',
+                            cursor: 'pointer' // 添加鼠标指针样式
+                        }}
+                    >
+                        <img
+                            src={`${config.backendUrl}${image.url}`}
+                            alt={`活动图片 ${image.id}`}
+                            onClick={() => router.push(`/imageview?activity=${router.query.activityPage}&imageId=${image.id}`)}
                             style={{
-                                position: 'relative',
-                                paddingTop: '100%'
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                borderRadius: '4px'
                             }}
+                        />
+                        <button 
+                            onClick={(e) => {
+                                e.stopPropagation(); // 阻止事件冒泡
+                                handleLikeImage(image.id);
+                            }}
+                            disabled={likedImages.has(image.id)}
+                            style={{/*...existing button styles...*/}}
                         >
-                            <img
-                                src={`${config.backendUrl}${image.url}`}
-                                alt={`活动图片 ${image.id}`}
-                                style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    borderRadius: '4px'
-                                }}
-                            />
-                            <button 
-                                onClick={() => handleLikeImage(image.id)}
-                                disabled={likedImages.has(image.id)}
-                                style={{
-                                    position: 'absolute',
-                                    bottom: '0.5rem',
-                                    right: '0.5rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: 'clamp(0.25rem, 1vw, 0.5rem) clamp(0.5rem, 2vw, 0.75rem)',
-                                    backgroundColor: likedImages.has(image.id) ? 'rgba(108, 117, 125, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                                    color: likedImages.has(image.id) ? 'white' : '#212529',
-                                    border: 'none',
-                                    borderRadius: '0.25rem',
-                                    cursor: likedImages.has(image.id) ? 'default' : 'pointer',
-                                    backdropFilter: 'blur(4px)',
-                                    fontSize: 'clamp(0.75rem, 2vw, 0.875rem)'
-                                }}
-                            >
-                                <Icon path={likedImages.has(image.id) ? mdiThumbUp : mdiThumbUpOutline} size={0.6} />
-                                <span>{image.likes}</span>
-                            </button>
-                        </div>
-                    ))}
+                            <Icon path={likedImages.has(image.id) ? mdiThumbUp : mdiThumbUpOutline} size={0.6} />
+                            <span>{image.likes}</span>
+                        </button>
+                    </div>
+                ))}
                 </div>
             </div>
         );

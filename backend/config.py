@@ -27,6 +27,7 @@ config = {
     },
     'imagefolder': '/home/hjdczy/imagelive/data/images', #存放图片的文件夹，需要手动创建
     'headimagefolder': '/home/hjdczy/imagelive/data/headimages', #存放活动头图的文件夹，需要手动创建
+    'thumbnailfolder': '/home/hjdczy/imagelive/data/thumbnails', #存放缩略图的文件夹，需要手动创建
     "domain" : "hjdczy.top", # 您的根域名，用于设置cookie
     "location" : "https://hjdczy.top:47840", # 您的后端地址，用于设置CORSMiddleware, 请注意端口号
     "frontlocation" : "https://hjdczy.top:47839" # 您的前端地址，用于设置CORSMiddleware , 请注意端口号

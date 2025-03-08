@@ -75,13 +75,21 @@ async def delete_image(request: Request , image_data: ImageDeletion):
                 params = (image_data.id,)
                 result = mysql_queries.query(mysql_queries.connection, query, params)
                 if result:
-                    # 删除图片文件
+                    # 删除原始图片文件
                     jpg_path = os.path.join(config['imagefolder'], f"{image_data.id}.jpg")
                     png_path = os.path.join(config['imagefolder'], f"{image_data.id}.png")
-                    if os.path.exists(jpg_path):
-                        os.remove(jpg_path)
-                    if os.path.exists(png_path):
-                        os.remove(png_path)
+                    # 删除缩略图
+                    thumb_path = os.path.join(config['thumbnailfolder'], f"{image_data.id}.webp")
+                    
+                    # 删除文件如果存在
+                    for path in [jpg_path, png_path, thumb_path]:
+                        try:
+                            if os.path.exists(path):
+                                os.remove(path)
+                        except Exception as e:
+                            print(f"删除文件 {path} 时出错: {str(e)}")
+                            continue
+                    
                     return {"success": True}
                 raise HTTPException(status_code=400, detail="删除失败")
             raise HTTPException(status_code=400, detail="权限不足")

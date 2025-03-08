@@ -6,6 +6,9 @@ import os
 from config import config
 from fastapi import Form, File, UploadFile
 import os
+import cv2
+from PIL import Image
+import io
 
 router = APIRouter()
 
@@ -52,20 +55,41 @@ async def upload_images(
                             result = mysql_queries.query(mysql_queries.connection, query)
                             photo_id = result[0][0]
                             
-                            # 3. 保存文件（使用小写扩展名）
+                            # 3. 保存原始文件
                             file_path = os.path.join(
                                 config['imagefolder'], 
-                                f"{photo_id}{ext}"  # ext 已经是小写的
+                                f"{photo_id}{ext}"
                             )
                             with open(file_path, "wb") as f:
                                 f.write(contents)
+
+                            # 4. 生成并保存缩略图
+                            try:
+                                # 从二进制数据读取图片
+                                img = Image.open(io.BytesIO(contents))
+                                
+                                # 计算缩放比例
+                                max_size = 1024
+                                ratio = max_size / max(img.size)
+                                if ratio < 1:  # 只有当图片大于1024时才需要缩放
+                                    new_size = tuple(int(dim * ratio) for dim in img.size)
+                                    img = img.resize(new_size, Image.Resampling.LANCZOS)
+                                
+                                # 保存为WebP格式
+                                thumb_path = os.path.join(
+                                    config['thumbnailfolder'],
+                                    f"{photo_id}.webp"
+                                )
+                                img.save(thumb_path, 'WEBP', quality=85)
+                                
+                            except Exception as e:
+                                raise HTTPException(status_code=500, detail="无法生成缩略图，具体原因：" + str(e))
                             
                             uploaded_files.append(photo_id)
 
                     except Exception as e:
                         print(f"处理文件 {file.filename} 时出错: {str(e)}")
                         continue
-
                 if uploaded_files:
                     return {"success": True, "uploaded_files": uploaded_files}
                 raise HTTPException(status_code=400, detail="没有文件上传成功")

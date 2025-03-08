@@ -8,6 +8,8 @@ const config = {
     //如果您不使用HTTPS，可以忽略下面两个配置项
     sslcertpath : '/hjdczy.top/cert/Nginx/hjdczy.top.crt', // HTTPS证书路径
     sslkeypath : '/hjdczy.top/cert/Nginx/hjdczy.top.key', // HTTPS私钥路径
+    host: '0.0.0.0', // 允许访问的主机
+    port: 47839  // 添加端口配置
 
 }
 

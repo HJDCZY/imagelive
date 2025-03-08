@@ -39,7 +39,7 @@ function ImageManage({ user }) {  // 通过 props 接收 user
 
     const getImageUrl = useCallback((imageId) => {
         if (!imageCache.has(imageId)) {
-            const url = `${config.backendUrl}/image/${imageId}`;
+            const url = `${config.backendUrl}/thumbnail/${imageId}`;
             setImageCache(prev => {
                 const newCache = new Map(prev);
                 newCache.set(imageId, url);
@@ -71,7 +71,7 @@ function ImageManage({ user }) {  // 通过 props 接收 user
         // 对新的过滤图片进行预缓存
         filteredImages.forEach(img => {
             if (!imageCache.has(img.id)) {
-                const url = `${config.backendUrl}/image/${img.id}`;
+                const url = `${config.backendUrl}/thumbnail/${img.id}`;
                 setImageCache(prev => {
                     const newCache = new Map(prev);
                     newCache.set(img.id, url);
