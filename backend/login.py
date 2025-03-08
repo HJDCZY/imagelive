@@ -6,16 +6,10 @@ from datetime import datetime, timedelta
 import mysql_queries  
 import time
 from fastapi.middleware.cors import CORSMiddleware
+from config import config
 
 router = APIRouter()
 
-# router.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["http://hjdczy.top", "https://hjdczy.top"],  # 允许的源
-#     allow_credentials=True,  # 允许携带凭证
-#     allow_methods=["*"],    # 允许的 HTTP 方法
-#     allow_headers=["*"],    # 允许的 HTTP 头
-# )
 
 
 #使用OAuth2PasswordBearer类，jwt算法
@@ -102,7 +96,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         httponly=True,
         samesite="none",    # 跨站请求必须设置为 none
         path="/",
-        domain="hjdczy.top",  # 明确设置域名
+        domain=config["domain"],
         secure=True,         # 跨站请求必须设置为 true
         max_age=1800
     )
@@ -157,7 +151,7 @@ async def logout(request: Request):
         response.delete_cookie(
             key=cookie_name,
             path="/",
-            domain="hjdczy.top",
+            domain=config["domain"],
             secure=True,
             samesite="none",
             httponly=True  # 添加这个确保和设置时的参数一致
@@ -172,7 +166,7 @@ async def logout(request: Request):
         httponly=True,
         secure=True,
         samesite="none",
-        domain="hjdczy.top",
+        domain=config["domain"],
         path="/"
     )
     

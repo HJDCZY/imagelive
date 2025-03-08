@@ -19,10 +19,42 @@ class FaceScanner:
     
     def __init__(self):
         if not FaceScanner._initialized:
-            # 初始化 InsightFace，指定使用 CPU
-            self.app = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider'])
+            device = config['face_detector']['device'].lower()
+            providers = config['face_detector']['providers'][device]
+            
+            try:
+                # 初始化 InsightFace，根据配置选择设备
+                self.app = FaceAnalysis(
+                    name='buffalo_sc', 
+                    providers=providers
+                )
+                self.app.prepare(
+                    ctx_id=0 if device == 'gpu' else -1,  # GPU使用0，CPU使用-1
+                    det_size=(640, 640)
+                )
+                print(f"人脸检测初始化成功，使用设备: {device.upper()}")
+                FaceScanner._initialized = True
+            except Exception as e:
+                print(f"使用 {device.upper()} 初始化失败: {str(e)}")
+                if device == 'gpu':
+                    print("尝试回退到 CPU 模式")
+                    self.__init_with_cpu()
+                else:
+                    raise e
+
+    def __init_with_cpu(self):
+        """当 GPU 初始化失败时的回退方法"""
+        try:
+            self.app = FaceAnalysis(
+                name='buffalo_sc',
+                providers=['CPUExecutionProvider']
+            )
             self.app.prepare(ctx_id=-1, det_size=(640, 640))
+            print("已成功回退到 CPU 模式")
             FaceScanner._initialized = True
+        except Exception as e:
+            print(f"CPU 初始化也失败: {str(e)}")
+            raise e
     
     def compare_faces(self, image1, image2):
         # 图片预处理

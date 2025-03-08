@@ -8,6 +8,7 @@ import imagedownload
 import imagemanage
 import index
 import facescan
+from config import config
 
 
 app = FastAPI()
@@ -27,12 +28,10 @@ from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://hjdczy.top:47839",    # 前端地址
-        "https://hjdczy.top:47839",
-        "http://hjdczy.top:47840",    # 后端地址
-        "https://hjdczy.top:47840",
-        "http://localhost:47839",      # 本地开发地址
-        "http://localhost:47840",
+        config["frontlocation"],
+        config["location"],
+        "http://localhost",
+        "https://localhost",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
