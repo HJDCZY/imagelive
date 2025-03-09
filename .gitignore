@@ -176,3 +176,5 @@ node_modules
 
 imagelive.tar
 *.tar
+backend/config.py
+frontend/config.js
