@@ -32,6 +32,7 @@ app.add_middleware(
         config["location"],
         "http://localhost",
         "https://localhost",
+        config["frontlocation2"],
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
