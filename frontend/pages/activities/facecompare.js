@@ -267,8 +267,9 @@ export default function FaceCompare() {
                 <button
                     onClick={() => router.push({ 
                         query: { loadScreen: false },
-                        pathname: router.pathname
-                    })}
+                        pathname: '/activities/' + activity
+
+                    })}                   
                     style={{
                         padding: '10px 20px',
                         backgroundColor: '#666',
