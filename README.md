@@ -17,6 +17,9 @@ for English version, please click [here](README_en.md)
 - Docker部署：提供完整的容器化部署方案
 
 ## 安装到您的服务器
+
+**目前此版README的安装方法已经过时，开发者已经用上了anaconda,但是懒得更新readme**
+
 首先，因为浏览器的CORS策略，此服务的开发和部署需要使用HTTPS，所以请确保您的服务器支持HTTPS并且在合适位置配置了SSL证书，后文还会提到。
 
 ### 使用docker部署

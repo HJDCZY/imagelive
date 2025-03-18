@@ -1,6 +1,6 @@
-npm run dev
+# npm run dev
 
-NODE_ENV=production npm run start -- --port 47839
+nohup npm run start &
 
 
 

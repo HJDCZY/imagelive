@@ -178,3 +178,9 @@ imagelive.tar
 *.tar
 backend/config.py
 frontend/config.js
+frontend_inside/
+backend_inside/
+
+frontend/nohup.out
+backend/nohup.out
+testfacescan
