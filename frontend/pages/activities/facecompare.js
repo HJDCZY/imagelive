@@ -265,7 +265,10 @@ export default function FaceCompare() {
                 textAlign: 'center'
             }}>
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => router.push({ 
+                        query: { loadScreen: false },
+                        pathname: router.pathname
+                    })}
                     style={{
                         padding: '10px 20px',
                         backgroundColor: '#666',

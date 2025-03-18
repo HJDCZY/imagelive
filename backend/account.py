@@ -131,13 +131,30 @@ async def deleteuser(request: Request, username_data: Username):
                 # 使用请求体中的用户名
                 if not authenticate_user(username_data.username):
                     raise HTTPException(status_code=400, detail="用户不存在")
-                # 删除用户
-                query = "DELETE FROM users WHERE name = %s"
-                params = (username_data.username,)
-                result = mysql_queries.query(mysql_queries.connection, query, params)
-                if result:
-                    return {"success": "用户删除成功"}
-                raise HTTPException(status_code=400, detail="用户删除失败")
+                
+                # 首先更新所有相关表中的外键引用
+                update_queries = [
+                    "UPDATE photos SET uploader = 'testuser' WHERE uploader = %s",
+                    "UPDATE activities SET creator = 'testuser' WHERE creator = %s",
+                    # 如果还有其他表引用了users表，也需要添加相应的更新语句
+                ]
+                
+                # 执行所有更新操作
+                try:
+                    for query in update_queries:
+                        mysql_queries.query(mysql_queries.connection, query, (username_data.username,))
+                    
+                    # 最后删除用户
+                    delete_query = "DELETE FROM users WHERE name = %s"
+                    result = mysql_queries.query(mysql_queries.connection, delete_query, (username_data.username,))
+                    
+                    if result:
+                        return {"success": "用户删除成功"}
+                    raise HTTPException(status_code=400, detail="用户删除失败")
+                except Exception as e:
+                    print(f"删除用户时出错: {str(e)}")
+                    raise HTTPException(status_code=400, detail=f"删除用户时出错: {str(e)}")
+                    
             raise HTTPException(status_code=400, detail="权限不足")
         raise HTTPException(status_code=400, detail="用户不存在")
     except JWTError:
@@ -145,9 +162,8 @@ async def deleteuser(request: Request, username_data: Username):
 
 
 @router.get("/accountList")
-#前端获取用户列表
 async def accountList(request: Request):
-    #验证请求用户的权限时是否是管理员
+    # 验证请求用户的权限是否是管理员
     access_token = request.cookies.get("access_token") or request.cookies.get("jwt")
     if access_token is None:
         raise HTTPException(status_code=400, detail="未登录")
@@ -157,8 +173,12 @@ async def accountList(request: Request):
         auth = await get_user_auth(username)
         if auth is not None:
             if auth == "admin":
-                #获取用户列表
-                query = "SELECT name, auth FROM users"
+                # 获取用户列表，排除系统用户
+                query = """
+                    SELECT name, auth FROM users 
+                    WHERE name NOT IN ('testuser')
+                    ORDER BY auth DESC, name ASC
+                """
                 result = mysql_queries.query(mysql_queries.connection, query)
                 if result:
                     return {"users": result}
