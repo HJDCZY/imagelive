@@ -85,26 +85,46 @@ export default function FaceCompare() {
     };
 
     // 提交照片到后端
+    // 在 submitPhoto 函数中添加超时控制和更详细的错误处理
+    
     const submitPhoto = async (photoFile) => {
         try {
             const formData = new FormData();
             formData.append('file', photoFile);
-
-            const response = await fetch(`${config.backendUrl}/compareFaces?activity_name=${activity}`, {
-                method: 'POST',
-                body: formData,
-            });
-
-            const data = await response.json();
-
+    
+            // 设置更长的超时时间（3分钟）
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 180000);
+    
+            const response = await fetch(
+                `${config.backendUrl}/compareFaces?activity_name=${activity}`, 
+                {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal,
+                }
+            );
+    
+            clearTimeout(timeout);
+    
             if (!response.ok) {
-                throw new Error(data.detail || `HTTP ${response.status} - ${response.statusText}`);
+                if (response.status === 504) {
+                    throw new Error('服务器处理超时，请稍后重试');
+                }
+                const data = await response.json();
+                throw new Error(data.detail || `服务器错误 (${response.status})`);
             }
-
+    
+            const data = await response.json();
             setMatchedPhotos(data);
             setMode('results');
         } catch (err) {
-            setError('照片比对失败：' + (err.message || '未知错误'));
+            if (err.name === 'AbortError') {
+                setError('请求超时，请稍后重试');
+            } else {
+                setError('照片比对失败：' + (err.message || '服务器无响应'));
+            }
+            console.error('提交照片错误:', err);
         } finally {
             setLoading(false);
         }
