@@ -11,6 +11,13 @@ import torch
 import concurrent.futures
 from typing import List
 import time 
+import gc
+
+import sys
+from numba import cuda
+
+import signal
+import threading
 
 
 class FaceScanner:
@@ -90,6 +97,7 @@ class FaceScanner:
                 else:
                     raise e
 
+    @staticmethod
     def __init_with_cpu(self):
         """当 GPU 初始化失败时的回退方法"""
         try:
@@ -217,9 +225,62 @@ class FaceScanner:
             
         # 批量比较特征向量
         max_score = self.batch_compare_embeddings(faces1, faces2)
-        print(f"比对上传的图片和数据库中的图片{image2_path},相似度: {max_score}")
+        # print(f"比对上传的图片和数据库中的图片{image2_path},相似度: {max_score}")
         return max_score > 0.4
 
+
+    def safe_cuda_reset(self):
+        """安全地关闭和重新初始化 CUDA"""
+        try:
+            # 1. 首先释放所有 PyTorch CUDA 资源
+            if hasattr(self, 'app'):
+                del self.app
+                
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+                torch.cuda.empty_cache()
+                torch.cuda.reset_peak_memory_stats()
+                
+            # 2. 执行 CUDA 关闭
+            if cuda.current_context():
+                cuda.close()
+                
+            # 3. 等待资源完全释放
+            time.sleep(0.5)
+            gc.collect()
+            
+            # 4. 重新初始化 CUDA
+            if self.use_cuda:
+                # 重新初始化 CUDA 上下文
+                cuda.current_context().reset()
+                torch.cuda.init()
+                
+                # 重新配置提供程序
+                providers = ['CUDAExecutionProvider']
+                provider_options = [{
+                    'device_id': 0,
+                    'arena_extend_strategy': 'kNextPowerOfTwo',
+                    'gpu_mem_limit': 2 * 1024 * 1024 * 1024,
+                    'cudnn_conv_algo_search': 'DEFAULT',
+                }]
+                
+                # 重新初始化 FaceAnalysis
+                self.app = FaceAnalysis(
+                    name='buffalo_sc',
+                    root=os.path.expanduser('~/.insightface/models'),
+                    providers=providers,
+                    provider_options=provider_options,
+                    allowed_modules=['detection', 'recognition']
+                )
+                
+                self.app.prepare(ctx_id=0, det_size=(256, 256))
+                print("CUDA 已完全重置和重新初始化")
+                return True
+                
+        except Exception as e:
+            print(f"CUDA 重置失败: {str(e)}")
+            return False
+        
 
 # 创建全局实例
 face_scanner = FaceScanner()
@@ -294,9 +355,70 @@ async def compare_faces(request: Request, activity_name: str, file: UploadFile =
         
         end = time.time()
         print(f"比对耗时: {end - start:.2f} 秒")
-        print ("平均比对时间: ", (end - start)/total_count)
+        print("平均比对时间: ", (end - start)/total_count)
+        
+        
+        #  # 清理资源并安排进程退出
+        # def cleanup_and_exit():
+        #     try:
+        #         # 清理 GPU 资源
+        #         if torch.cuda.is_available():
+        #             torch.cuda.empty_cache()
+        #             gc.collect()
+                
+        #         print("资源清理完成，准备退出进程...")
+                
+        #         # 获取当前进程 ID
+        #         pid = os.getpid()
+                
+        #         # 延迟 2 秒后发送 SIGTERM 信号
+        #         def delayed_exit():
+        #             time.sleep(2)
+        #             os.kill(pid, signal.SIGTERM)
+                
+        #         # 启动延迟退出线程
+        #         threading.Thread(target=delayed_exit, daemon=True).start()
+                
+        #     except Exception as e:
+        #         print(f"清理资源时出错: {str(e)}")
+        
+        # # 启动清理线程
+        # threading.Thread(target=cleanup_and_exit, daemon=True).start()
+
+        #
+        
+        
+        
         return results
         
     except Exception as e:
-        print(f"处理出错: {str(e)}")
-        raise HTTPException(status_code=500, detail="处理照片时出错")
+        
+        raise e
+    finally:
+        try:
+            if hasattr(face_scanner, 'use_cuda') and face_scanner.use_cuda:
+                # 尝试安全重置 CUDA
+                if not face_scanner.safe_cuda_reset():
+                    print("CUDA 重置失败，切换到 CPU 模式")
+                    # 切换到 CPU 模式
+                    face_scanner.device = 'cpu'
+                    face_scanner.use_cuda = False
+                    face_scanner.torch_device = torch.device('cpu')
+                    face_scanner._initialized = False
+                    face_scanner.__init__()
+                    
+        except Exception as e:
+            print(f"资源清理过程中出错: {str(e)}")
+            # 强制进行资源清理
+            if cuda.current_context():
+                try:
+                    cuda.close()
+                except:
+                    pass
+            if torch.cuda.is_available():
+                try:
+                    torch.cuda.empty_cache()
+                    torch.cuda.reset_peak_memory_stats()
+                except:
+                    pass
+            gc.collect()

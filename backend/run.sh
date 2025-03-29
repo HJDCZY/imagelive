@@ -8,4 +8,4 @@
 #   --ssl-certfile=/hjdczy.top/cert/Nginx/hjdczy.top.crt
 
 
-nohup  gunicorn main:app     --workers 5     --worker-class uvicorn.workers.UvicornWorker     --bind 0.0.0.0:47840     --keyfile=/hjdczy.top/cert/Nginx/hjdczy.top.key     --certfile=/hjdczy.top/cert/Nginx/hjdczy.top.crt &
+nohup  gunicorn main:app     --workers 4     --worker-class uvicorn.workers.UvicornWorker     --bind 0.0.0.0:47840     --keyfile=/hjdczy.top/cert/Nginx/hjdczy.top.key  --timeout 120     --certfile=/hjdczy.top/cert/Nginx/hjdczy.top.crt &
