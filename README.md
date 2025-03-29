@@ -21,7 +21,7 @@ for English version, please click [here](README_en.md)
 **目前此版README的安装方法已经过时，开发者已经用上了anaconda,但是懒得更新readme**
 
 首先，因为浏览器的CORS策略，此服务的开发和部署需要使用HTTPS，所以请确保您的服务器支持HTTPS并且在合适位置配置了SSL证书，后文还会提到。
-
+<!-- 
 ### 使用docker部署
 imagelive在开发中就使用了docker，我们建议您使用docker部署imagelive。
 我们在每一个release中都会提供一个docker的.tar格式文件，您可以直接下载并使用docker加载这个.tar文件。
@@ -72,10 +72,10 @@ uvicorn main:app --host 0.0.0.0 --port 47840\
 访问您服务器的47839端口，您应该可以看到imagelive的前端页面。
 如果要访问后台，您可以访问/admin，您应该可以看到后台的登录页面。
 
-我们推荐您使用nginx反向代理来部署imagelive，这样可以更好的保护您的服务器，反向代理的部署方法在此不再赘述。
+我们推荐您使用nginx反向代理来部署imagelive，这样可以更好的保护您的服务器，反向代理的部署方法在此不再赘述。 -->
 
 ### 手动部署
-如果您不想使用docker，您也可以手动部署imagelive。
+<!-- 如果您不想使用docker，您也可以手动部署imagelive。 -->
 首先，下载imagelive的源码，您可以使用git clone或者直接下载zip文件。
 
 安装所需的依赖
@@ -88,7 +88,12 @@ npm install
 
 #安装后端所需的依赖
 cd ../backend
+
 pip3 install -r requirements.txt
+#environment.yml中有anaconda的环境配置文件，您可以使用anaconda安装依赖
+
+
+
 ```
 之后，您需要配置数据库，我们在`backend/mysql.sql`中提供了数据库的配置文件，您可以使用这个文件来配置数据库。
 
@@ -119,9 +124,10 @@ cd frontend
 
 #启动后端
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 47840\
---ssl-keyfile=您的SSL证书挂载路径.key\
---ssl-certfile=您的SSL证书挂载路径.crt
+
+# 应当有 conda activate 
+
+./run.sh
 
 ```
 
@@ -137,6 +143,9 @@ uvicorn main:app --host 0.0.0.0 --port 47840\
 - 整理缩进。
 - 优化后台的图片上传逻辑，一张一张传
 - 给后台上传图片加进度条
-- 给前台人脸比对加进度条，现在人脸比对用的CPU，速度较慢，用户可能会感到不耐烦
+- 给前台人脸比对加进度条，现在人脸比对用的是gtx 970，比较慢
+- 开发android应用程序，便于上传图片
+
+
 
 我们欢迎您对imagelive提出建议和意见，更欢迎您参与到imagelive的开发中来，imagelive使用GPL-3.0协议，您可以自由的使用、修改、分发imagelive的源码。
